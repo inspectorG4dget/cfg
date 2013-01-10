@@ -11,9 +11,9 @@ I'm still deciding on the API. So far I'm thinking
 
     from cfg import parse
 
-    graph = parse(file='filename.py')
+    graph = parse('file.py')
 
-    graph.walk('path')  # returns an iterator for one path
+    graph.walk(0)  # returns an iterator for one path
 
 Or more succinctly
 
@@ -21,7 +21,7 @@ Or more succinctly
 
     from cfg import walk
 
-    walk(file='filename.py', path='path')  # returns an iterator like above
+    walk(file='filename.py', path=2)  # returns an iterator like above
 
 
 .. links
