@@ -1,5 +1,9 @@
-Control Flow Graph
-------------------
+Control Flow Graph (cfg)
+------------------------
+
+:authors: Ian Cordasco, Ashwin Panchapakesan
+:copyright: 2013 Ian Cordasco, Ashwin Panchapakesan
+:license: Apache 2.0
 
 Spurred by a `StackOverflow question`_, I decided to write something that 
 would attempt to generate a Control Flow Graph without creating visuals. This 
