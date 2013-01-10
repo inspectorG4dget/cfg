@@ -8,8 +8,7 @@ things as well.
 
 """
 
-import _ast
-#import ast
+import ast
 import os
 from cfg.utils import node_type
 
@@ -30,8 +29,9 @@ class ControlFlowGraph(object):
         #: Name of the file
         self.filename = filename
         #: _ast.Module object
-        self.ast = compile(open(filename).read(), filename, 'exec',
-                           _ast.PyCF_ONLY_AST)
+        self.ast = ast.parse(open(filename).read(), filename)
+        #self.ast = compile(open(filename).read(), filename, 'exec',
+        #                   _ast.PyCF_ONLY_AST)
         #: Dictionary of mappings from function name to _ast.FunctionDef
         self.functions = {}
         #: Dictionary of mappings from class name to _ast.ClassDef
@@ -46,39 +46,66 @@ class ControlFlowGraph(object):
         return '<Control Flow Grap for "{0}">'.format(self.filename)
 
     def generateGraph(self):
+        """Generates the actual ControlFlowGraph"""
         for node in self.ast.body:
             name = node_type(node)
 
-            if not self.root:
-                self.root = Node(node)
-
-            if not self.terminus:
-                self.terminus = self.root
+            pathNode = Node(node)
 
             if name == 'classdef':
-                self.classes[node.name] = node
+                self.classes[node.name] = pathNode
             elif name == 'functiondef':
-                self.functions[node.name] = node
+                self.functions[node.name] = pathNode
             elif name == 'if':
-                self._handleIf(node)
+                self._handleIf(pathNode)
 
             # add new edge with node & update terminus
+            if not self.root:
+                self.root = pathNode
+
+            if not self.terminus:
+                self.terminus = pathNode
+                continue
+
+            self.addNode(pathNode)
 
     def _handleIf(self, node):
         pass
 
+    def addNode(self, node):
+        """Adds a node to the terminus and modifies the terminus"""
+        self.terminus.addEdge(node)
+        self.terminus = pathNode
+
 
 class Node(object):
+    attrs = {
+        'str': 's',
+        'int': 'n',
+        'expr': 'value',
+        'fucnctiondef': 'name',
+        'classdef': 'name',
+    }
     def __init__(self, node):
-        self.node = node
+        self.astNode = node
         self.type = node._cfg_type
-        self.edge = None
+        self.edges = []
+        attr = self.attrs.get(self.type)
+        self.id = None
+        if attr:
+            self.id = getattr(node, attr, None)
+
+    def addEdge(node):
+        self.edges.append(Edge(self, node))
 
 
 class Edge(object):
     def __init__(self, parent, successor):
-        self.parent
-        self.successor
+        self.parent = parent
+        self.successor = successor
+
+    def follow(self):
+        return self.successor
 
 
 class CFGError(Exception):
