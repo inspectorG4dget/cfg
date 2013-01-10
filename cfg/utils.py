@@ -8,7 +8,7 @@ Various utilities for cfg
 """
 
 
-def node_type(node):
+def nodeType(node):
     if hasattr(node, '_cfg_type'):
         return node._cfg_type
 

@@ -40,12 +40,12 @@ class ControlFlowGraph(object):
         self.root = None
         #: Last added node
         self.terminus = None
-        #self.generate_graph()
+        #self.generateGraph()
 
     def __repr__(self):
         return '<Control Flow Grap for "{0}">'.format(self.filename)
 
-    def generate_graph(self):
+    def generateGraph(self):
         for node in self.ast.body:
             name = node_type(node)
 
@@ -60,11 +60,11 @@ class ControlFlowGraph(object):
             elif name == 'functiondef':
                 self.functions[node.name] = node
             elif name == 'if':
-                self._handle_if(node)
+                self._handleIf(node)
 
             # add new edge with node & update terminus
 
-    def _handle_if(self, node):
+    def _handleIf(self, node):
         pass
 
 
