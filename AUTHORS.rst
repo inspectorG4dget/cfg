@@ -3,4 +3,4 @@ Development Lead
 
 - Ian Cordasco <graffatcolmingov@gmail.com>
 
-- Ashwin Panchapakesan
+- Ashwin Panchapakesan <ashwin.panchapakesan@gmail.com>
