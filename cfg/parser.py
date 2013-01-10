@@ -72,6 +72,7 @@ class Node(object):
     def __init__(self, node):
         self.node = node
         self.type = node._cfg_type
+        self.edge = None
 
 
 class Edge(object):
