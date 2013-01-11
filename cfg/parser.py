@@ -102,6 +102,15 @@ class Node(object):
         if attr:
             self.id = getattr(node, attr, None)
 
+        if self.type == 'import':
+            names = self.astNode.names
+            ids = [(n.name, n.asname) for n in names]
+            remove = set([None])  # items we don't want included in our tuples
+            ids = [' as '.join(list(set(i) - set(remove))) for i in ids]
+            self.id = ', '.join(ids)
+
+        self.lineno = self.astNode.lineno
+
     def addEdge(self, node):
         self.edges.append(Edge(self, node))
 
