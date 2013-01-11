@@ -10,7 +10,7 @@ things as well.
 
 import ast
 import os
-from cfg.utils import node_type
+from cfg.utils import nodeType
 
 
 def parse(filename):
@@ -30,16 +30,16 @@ class ControlFlowGraph(object):
         self.filename = filename
         #: _ast.Module object
         self.ast = ast.parse(open(filename).read(), filename)
-        #self.ast = compile(open(filename).read(), filename, 'exec',
-        #                   _ast.PyCF_ONLY_AST)
         #: Dictionary of mappings from function name to _ast.FunctionDef
         self.functions = {}
         #: Dictionary of mappings from class name to _ast.ClassDef
         self.classes = {}
+        #: Dictionary of imports
+        self.imports = {}
         #: Root node of type :class:`Node <Node>`
         self.root = None
-        #: Last added node
-        self.terminus = None
+        #: Last added node(s)
+        self.termini = []
         #self.generateGraph()
 
     def __repr__(self):
@@ -47,35 +47,41 @@ class ControlFlowGraph(object):
 
     def generateGraph(self):
         """Generates the actual ControlFlowGraph"""
-        for node in self.ast.body:
-            name = node_type(node)
-
-            pathNode = Node(node)
-
-            if name == 'classdef':
-                self.classes[node.name] = pathNode
-            elif name == 'functiondef':
-                self.functions[node.name] = pathNode
-            elif name == 'if':
-                self._handleIf(pathNode)
+        for b in self.ast.body:
+            node = Node(b)
+            self.handleNode(node)
 
             # add new edge with node & update terminus
             if not self.root:
-                self.root = pathNode
+                self.root = node
 
             if not self.terminus:
-                self.terminus = pathNode
+                self.termini.append(node)
                 continue
 
-            self.addNode(pathNode)
+            self.addNode(node)
 
     def _handleIf(self, node):
         pass
 
+    def _handleTry(self, node):
+        pass
+
     def addNode(self, node):
-        """Adds a node to the terminus and modifies the terminus"""
-        self.terminus.addEdge(node)
-        self.terminus = pathNode
+        #for t in self.termini:
+        #    t.addEdge(node)
+        pass
+
+    def handleNode(self, node):
+        name = node.type
+
+        if name == 'classdef':
+            self.classes[node.id] = node
+        elif name == 'functiondef':
+            self.functions[node.id] = node
+        elif name == 'tryexcept':
+            self.handleTry(self, node)
+        # need to handle if's, try-except
 
 
 class Node(object):
@@ -86,17 +92,21 @@ class Node(object):
         'fucnctiondef': 'name',
         'classdef': 'name',
     }
+
     def __init__(self, node):
         self.astNode = node
-        self.type = node._cfg_type
+        self.type = getattr(node, '_cfg_type', nodeType(node))
         self.edges = []
         attr = self.attrs.get(self.type)
         self.id = None
         if attr:
             self.id = getattr(node, attr, None)
 
-    def addEdge(node):
+    def addEdge(self, node):
         self.edges.append(Edge(self, node))
+
+    def __repr__(self):
+        return '<Node [{0.type}]>'.format(self)
 
 
 class Edge(object):
