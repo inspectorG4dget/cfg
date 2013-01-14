@@ -38,28 +38,16 @@ class ControlFlowGraph(object):
         self.imports = {}
         #: Root node of type :class:`Node <Node>`
         self.root = None
-        #: Last added node(s)
-        self.termini = []
-        #self.generateGraph()
+        #: Last added node
+        self.last = None
+        self.generateGraph()
 
     def __repr__(self):
         return '<Control Flow Grap for "{0}">'.format(self.filename)
 
     def generateGraph(self):
         """Generates the actual ControlFlowGraph"""
-        for b in self.ast.body:
-            node = Node(b)
-            self.handleNode(node)
-
-            # add new edge with node & update terminus
-            if not self.root:
-                self.root = node
-
-            if not self.terminus:
-                self.termini.append(node)
-                continue
-
-            self.addNode(node)
+        self.firstPass()
 
     def _handleIf(self, node):
         pass
@@ -71,6 +59,27 @@ class ControlFlowGraph(object):
         #for t in self.termini:
         #    t.addEdge(node)
         pass
+
+    def firstPass(self):
+        """FIrst pass over the ast object"""
+        for b in self.ast.body:
+            node = Node(b)
+
+            if node.type == 'classdef':
+                self.classes[node.id] = node
+            elif node.type == 'functiondef':
+                self.functions[node.id] = node
+
+            # add new edge with node & update terminus
+            if not self.root:
+                self.root = node
+
+            if not self.last:
+                self.last = node
+
+            if not self.last is node:
+                self.last.addEdge(node)
+                self.last = node
 
     def handleNode(self, node):
         name = node.type
