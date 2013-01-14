@@ -30,6 +30,8 @@ class ControlFlowGraph(object):
         self.filename = filename
         #: _ast.Module object
         self.ast = ast.parse(open(filename).read(), filename)
+        #: Module name
+        self.module = os.path.basename(self.filename).rstrip('.py')
         #: Dictionary of mappings from function name to _ast.FunctionDef
         self.functions = {}
         #: Dictionary of mappings from class name to _ast.ClassDef
@@ -61,9 +63,9 @@ class ControlFlowGraph(object):
         pass
 
     def firstPass(self):
-        """FIrst pass over the ast object"""
+        """First pass over the ast object"""
         for b in self.ast.body:
-            node = Node(b)
+            node = Node(b, self.module)
 
             if node.type == 'classdef':
                 self.classes[node.id] = node
@@ -80,6 +82,29 @@ class ControlFlowGraph(object):
             if not self.last is node:
                 self.last.addEdge(node)
                 self.last = node
+
+    def secondPass(self):
+        """Second pass. Uses partially constructed CFG"""
+        node = self.root
+        scope = [self.module]
+        while True:
+            if not node:
+                break
+
+            if node.hasBody and node.id:
+                scope.append(node.id)
+
+            scopeString = '.'.join(scope)
+            last = None
+            for child in ast.iter_child_nodes(node.astNode):
+                n = Node(child, scopeString)
+                if last is None:
+                    node.addEdge(n)
+                else:
+                    last.addEdge(n)
+                last = n
+
+            node = node.edges[0].follow() if node.hasEdges else None
 
     def handleNode(self, node):
         name = node.type
@@ -102,14 +127,16 @@ class Node(object):
         'classdef': 'name',
     }
 
-    def __init__(self, node):
+    def __init__(self, node, namespace):
         self.astNode = node
         self.type = getattr(node, '_cfg_type', nodeType(node))
         self.edges = []
         attr = self.attrs.get(self.type)
         self.id = None
+        self.namespace = namespace
         if attr:
-            self.id = getattr(node, attr, None)
+            value = getattr(node, attr, None)
+            self.id = self.namespace + '.' + value
 
         if self.type == 'import':
             names = self.astNode.names
@@ -118,10 +145,19 @@ class Node(object):
             ids = [' as '.join(list(set(i) - set(remove))) for i in ids]
             self.id = ', '.join(ids)
 
-        self.lineno = self.astNode.lineno
+        self.hasBody = True if hasattr(node, 'body') else False
+
+        if hasattr(node, 'lineno'):
+            self.lineno = self.astNode.lineno
+        self.hasEdges = False
 
     def addEdge(self, node):
+        self.hasEdges = True
         self.edges.append(Edge(self, node))
+
+    def iterEdges(self):
+        for edge in self.edges:
+            yield edge
 
     def __repr__(self):
         return '<Node [{0.type}]>'.format(self)
@@ -131,6 +167,9 @@ class Edge(object):
     def __init__(self, parent, successor):
         self.parent = parent
         self.successor = successor
+
+    def __repr__(self):
+        return '<Edge [{0} -> {1}]>'.format(self.parent, self.successor)
 
     def follow(self):
         return self.successor
