@@ -13,5 +13,4 @@ def nodeType(node):
         return node._cfg_type
 
     name = node.__class__.__name__.lower()
-    node._cfg_type = name
     return name

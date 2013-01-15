@@ -8,9 +8,11 @@ things as well.
 
 """
 
-import ast
+import _ast
 import os
-from cfg.utils import nodeType
+import utils
+import itertools
+from platform import node
 
 
 def parse(filename):
@@ -23,100 +25,136 @@ def parse(filename):
         raise CFGError('"{0}" does not exist'.format(filename))
     return ControlFlowGraph(filename)
 
+class Node(object):
+    ID = itertools.count(1)
+    
+    def __init__(self, node):
+        self.id = self.__class__.ID.next()
+        self.label = self._getLabel(node)
+        self.ast = node
+        self.type = utils.nodeType(self)
+        self.edges = []
+        
+    def connect(self, node):
+        dest = Node(node)
+        e = Edge()
+        e.source = self
+        e.dest = dest
+        e.setLabel()
+        self.edges.append(e)
+    
+    def _getLabel(self, node):
+        pass
+
+class Edge(object):
+    ID = itertools.count(1)
+    
+    def __init__(self, parent, successor):
+        self.id = self.__class__.ID.next()
+        self.source = parent
+        self.dest = successor
+        self.label = self._getLabel()
+    
+    def setLabel(self):
+        self._getLabel()
+    
+    def _getLabel(self):
+        pass
+
+class CFGError(Exception):
+    pass
 
 class ControlFlowGraph(object):
+    handlers = {}
+    atomics = set([_ast.Add, _ast.And, _ast.Assign, _ast.Augassign, _ast.Binop, _ast.Bitand, _ast.Bitor, _ast.Bitxor, _ast.Boolop, _ast.Break, _ast.Compare, _ast.Div, _ast.Eq, _ast.Expression, _ast.Floordiv, _ast.Gt, _ast.Gte, _ast.Import, _ast.Importfrom, _ast.In, _ast.Is, _ast.Isnot, _ast.Lshift, _ast.Lt, _ast.Lte, _ast.Mod, _ast.Mult, _ast.Not, _ast.Noteq, _ast.Notin, _ast.Or, _ast.Pass, _ast.Pow, _ast.Print, _ast.Rshift, _ast.Raise, _ast.Return, _ast.Store, _ast.Str, _ast.Unaryop, _ast.Yield])        
+    
     def __init__(self, filename):
-        #: Name of the file
-        self.filename = filename
-        #: _ast.Module object
-        self.ast = ast.parse(open(filename).read(), filename)
-        #: Dictionary of mappings from function name to _ast.FunctionDef
-        self.functions = {}
-        #: Dictionary of mappings from class name to _ast.ClassDef
-        self.classes = {}
-        #: Dictionary of imports
-        self.imports = {}
-        #: Root node of type :class:`Node <Node>`
-        self.root = None
-        #: Last added node(s)
-        self.termini = []
+        self.filename = filename #: name of the file containing code to be analyzed
+        self.ast = compile(open(filename).read(), filename, 'exec', _ast.PyCF_ONLY_AST) #: _ast.Module object
+        self.functions = {} #: Dictionary of mappings from function name to _ast.FunctionDef
+        self.classes = {} #: Dictionary of mappings from class name to _ast.ClassDef
+        self.root = None #: Source node of type :class:`Node <Node>`. Execution begins here
+        self.curr=None #: Last added node
+        self.danglers = []
+        self.terminals = []
         #self.generateGraph()
 
     def __repr__(self):
-        return '<Control Flow Grap for "{0}">'.format(self.filename)
+        return '<Control Flow Graph for "{0}">'.format(self.filename)
 
-    def generateGraph(self):
-        """Generates the actual ControlFlowGraph"""
-        for b in self.ast.body:
-            node = Node(b)
-            self.handleNode(node)
+    def generateGraph(self, ast=None):
+        """ Return only the root. Since the graph is fully connected, a traversal will get you anywhere you need to go """
+        
+        if ast is None:
+            ast = self.ast
+        if danglers is None:
+            danglers = []
+            
+        for node in ast.body:
+            name = utils.nodeType(node)
+            node = Node(node)
+            
+            for d in self.danglers:
+                d.connect(node)
+            self.danglers = []
+            self.curr = node
 
             # add new edge with node & update terminus
             if not self.root:
                 self.root = node
 
-            if not self.terminus:
-                self.termini.append(node)
-                continue
+            if name == 'classdef':
+                self.classes[node.name] = node
+            elif name == 'functiondef':
+                self.functions[node.name] = node
+            elif name == 'if':
+                self._handleIf(node)
 
             self.addNode(node)
 
-    def _handleIf(self, node):
-        pass
-
+    def _handleNode(self, node, succ):
+        if node.__class__ in self.atomics:
+            return self._handleAtomic(node, succ)
+    
+    def _handleIf(self, node, succ):
+        node = Node(node)
+        answer = node
+        succ = Node(succ)
+        node.connect(succ)
+        curr = Node(node.body[0])
+        node.connect(curr)
+        for succ in node.body[1:]:
+            succ = self._handleNode(node, succ)
+            curr.connect(succ)
+            curr = succ
+        if answer.ast.orelse.body:
+            curr = answer
+            for succ in curr.ast.orelse.body:
+                succ = self._handleNode(curr, succ)
+                curr.connect(succ)
+                curr = succ
+        return answer
+    
     def _handleTry(self, node):
         pass
-
-    def addNode(self, node):
-        #for t in self.termini:
-        #    t.addEdge(node)
+    
+    def _handleRaise(self, node):
         pass
-
-    def handleNode(self, node):
-        name = node.type
-
-        if name == 'classdef':
-            self.classes[node.id] = node
-        elif name == 'functiondef':
-            self.functions[node.id] = node
-        elif name == 'tryexcept':
-            self.handleTry(self, node)
-        # need to handle if's, try-except
-
-
-class Node(object):
-    attrs = {
-        'str': 's',
-        'int': 'n',
-        'expr': 'value',
-        'fucnctiondef': 'name',
-        'classdef': 'name',
-    }
-
-    def __init__(self, node):
-        self.astNode = node
-        self.type = getattr(node, '_cfg_type', nodeType(node))
-        self.edges = []
-        attr = self.attrs.get(self.type)
-        self.id = None
-        if attr:
-            self.id = getattr(node, attr, None)
-
-    def addEdge(self, node):
-        self.edges.append(Edge(self, node))
-
-    def __repr__(self):
-        return '<Node [{0.type}]>'.format(self)
-
-
-class Edge(object):
-    def __init__(self, parent, successor):
-        self.parent = parent
-        self.successor = successor
-
-    def follow(self):
-        return self.successor
-
-
-class CFGError(Exception):
-    pass
+    
+    def _handleFunction(self, node):
+        pass
+    
+    def _handleLoop(self, node):
+        pass
+    
+    def _handleAtomic(self, node, succ):
+        succ = self._handleNode(succ)
+        node = Node(node)
+        node.connect(succ)
+        return node
+    
+if __name__ == "__main__":
+    print 'starting'
+    g = ControlFlowGraph('test.py')
+    g.generateGraph()
+    print 'done'
