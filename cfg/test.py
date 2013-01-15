@@ -1,17 +1,27 @@
 def bar():
-	for x in [1,2]:
-		print x
-		if x%2:
-			print x**2
-			break
-		else:
-			print x**3
+	try:
+		[]+1
+	except AttributeError:
+		print 'oops'
 	else:
-		print x
-	print "done"
+		print 'woo hoo'
+	finally:
+		print 'phew'
+	print 'done'
+
+#def bar():
+#	for x in [1,2]:
+#		print x
+#		if x%2:
+#			print x**2
+#			break
+#		else:
+#			print x**3
+#	else:
+#		print x
+#	print "done"
 
 bar()
-
 
 #def add(a, b):
 #    return a + b
