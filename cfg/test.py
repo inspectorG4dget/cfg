@@ -1,5 +1,5 @@
 #import utils
-
+#
 #def bar():
 #	try:
 #		[]+1
@@ -10,8 +10,9 @@
 #	finally:
 #		print 'phew'
 #	print 'done'
-
+#bar()
 def bar():
+	a += 1
 	for x in [1,2]:
 		print x
 		if x%2:
@@ -22,9 +23,8 @@ def bar():
 	else:
 		print x
 	print "done"
-
-bar(
-bar())
+#
+#assert(1==bar())
 
 #def add(a, b):
 #    return a + b

@@ -58,29 +58,30 @@ class xmlConverter(object):
         return 1
        
     def handleAtomic(self, doc, parent, astnode):
-        childName = self.getName(astnode)
-        child = doc.createElement(childName)
-        try:
-            label = str(astnode.lineno)
-        except:
-            label = childName
-        child.appendChild(self.doc.createTextNode(label))
-        parent.appendChild(child)
-        
         return 1
        
-    def handleAssert(self, doc, parent, astnode):
-        childname = self.getName(astnode)
-        child = doc.createElement(childname)
-        child.appendChild(self.doc.createTextNode(str(astnode.lineno)))
-        parent.appendChild(child)
+    def handleAssert(self, doc, root, astnode):
+        
+        if not self.handleNode(doc, root, astnode.test):
+            root.childnodes.pop(-1)
+                
         return 1
     
     def handleAttribute(self, doc, parent, astnode):
         pass
     
-    def handleAugAssign(self, doc, parent, astnode):
-        pass
+    def handleAugAssign(self, doc, root, astnode):
+        
+        if not self.handleNode(doc, root, astnode.target):
+            root.childNodes.pop(-1)
+        
+        if not self.handleNode(doc, root, astnode.op):
+            root.childNodes.pop(-1)
+            
+        if not self.handleNode(doc, root, astnode.value):
+            root.childNodes.pop(-1)
+        
+        return 1
     
     def handleAugLoad(self, doc, parent, astnode):
         pass
@@ -88,47 +89,68 @@ class xmlConverter(object):
     def handleAugStore(self, doc, parent, astnode):
         pass
     
-    def handleBinOp(self, doc, parent, astnode):
-        pass
+    def handleBinOp(self, doc, root, astnode):
+        
+        if not self.handleNode(doc, root, astnode.left):
+            root.childNodes.pop(-1)
+        
+        if not self.handleNode(doc, root, astnode.op):
+            root.childNodes.pop(-1)
+        
+        if not self.handleNode(doc, root, astnode.right):
+            root.childNodes.pop(-1)
+        
+        return 1
     
     def handleBitAnd(self, doc, parent, astnode):
-        pass
+        return 1
     
     def handleBitOr(self, doc, parent, astnode):
-        pass
+        return 1
     
     def handleBitXor(self, doc, parent, astnode):
-        pass
+        return 1
     
     def handleBoolOp(self, doc, parent, astnode):
         pass
     
-    def handleCall(self, doc, parent, astnode):
-        childName = self.getName(astnode)
-        child = doc.createElement(childName)
-        child.appendChild(self.doc.createTextNode(str(astnode.lineno)))
-        parent.appendChild(child)
+    def handleCall(self, doc, root, astnode):
         
         if isinstance(astnode.func, _ast.Attribute):	# this is an imported function
+#            self.handleAttribute(doc, child, node)
             for node in self.FUNCTIONS[astnode.func.id].body:
-                if not self.HANDLERS[node.__class__](self, doc, child, node):
-                    child.childNodes.pop(-1)
+                if not self.handleNode(doc, root, node):
+                    root.childNodes.pop(-1)
         else:
             for arg in astnode.args:
-                if not self.HANDLERS[arg.__class__](self, doc, child, arg):
-                    child.childNodes.pop(-1)
+                if not self.handlenode(doc, child, arg):
+                    root.childNodes.pop(-1)
                     
             for node in self.FUNCTIONS[astnode.func.id].body:
-                if not self.HANDLERS[node.__class__](self, doc, child, node):
-                    child.childNodes.pop(-1)
+                if not self.handleNode(doc, root, node):
+                    root.childNodes.pop(-1)
         
         return 1
     
     def handleClassDef(self, doc, parent, astnode):
         pass
     
+    def handleCompare(self, doc, root, astnode):
+		
+        self.handleNode(doc, root, astnode.left)
+        
+        for op in astnode.ops:
+            if not self.handleNode(doc, root, op):
+        	    root.childNodes.pop(-1)
+       
+        for comparator in astnode.comparators:
+            if not self.handleNode(doc, root, comparator):
+                root.childNodes.pop(-1)
+        
+        return 1
+    
     def handleContinue(self, doc, parent, astnode):
-        pass
+        return 1
     
     def handleDel(self, doc, parent, astnode):
         pass
@@ -145,72 +167,51 @@ class xmlConverter(object):
     def handleEllipsis(self, doc, parent, astnode):
         pass
     
-    def handleExceptHandler(self, doc, parent, astnode):
-        childName = self.getName(astnode)
-        child = doc.createElement(childName)
-        
-        child.appendChild(self.doc.createTextNode(str(astnode.lineno)))
-        parent.appendChild(child)
+    def handleExceptHandler(self, doc, root, astnode):
         
         for node in astnode.body:
-            if not self.HANDLERS[node.__class__](self, doc, child, node):
-                child.childNodes.pop(-1)
+            if not self.handleNode(doc, root, node):
+                root.childNodes.pop(-1)
     
     def handleExec(self, doc, parent, astnode):
         pass
     
-    def handleExpr(self, doc, parent, astnode):
-        childName = self.getName(astnode)
-        child = doc.createElement(childName)
-        child.appendChild(self.doc.createTextNode(str(astnode.lineno)))
-        parent.appendChild(child)
+    def handleExpr(self, doc, root, astnode):
         
-        if not isinstance(astnode.value, _ast.Call):
-            self.handleAtomic(self.doc, child, astnode.value)
-        else:
-            self.handleCall(self.doc, child, astnode.value)
+        if not self.handleNode(self.doc, root, astnode.value):
+            root.childNodes.pop(-1)
         
         return 1
        
     def handleExtSlice(self, doc, parent, astnode):
         pass
     
-    def handleLoop(self, doc, parent, astnode):
-        childName = self.getName(astnode)
-        child = doc.createElement(childName)
-        
-        child.appendChild(self.doc.createTextNode(str(astnode.lineno)))
-        parent.appendChild(child)
+    def handleLoop(self, doc, root, astnode):
         
         for node in astnode.body:
-            if not self.HANDLERS[node.__class__](self, doc, child, node):
-                child.childNodes.pop(-1)
+            if not self.handleNode(doc, root, node):
+                root.childNodes.pop(-1)
         
-        grandchildName = "else"
-        grandchild = doc.createElement(grandchildName)
-        grandchild.appendChild(self.doc.createTextNode(max('-', str(min((node.lineno for node in astnode.orelse if hasattr(node, 'lineno')))-1) )))
-        child.appendChild(grandchild)
+        childName = "else"
+        child = doc.createElement(childName)
+        child.appendChild(self.doc.createTextNode(max('-', str(min((node.lineno for node in astnode.orelse if hasattr(node, 'lineno')))-1) )))
+        root.appendChild(child)
         for node in astnode.orelse:
-            if not self.HANDLERS[node.__class__](self, doc, grandchild, node):
+            if not self.handleNode(doc, child, node):
                 child.childNodes.pop(-1)
         
         return 1
     
-    def handleFunctionDef(self, doc, parent, astnode):
+    def handleFunctionDef(self, doc, root, astnode):
         
         if not self.imported:
             self.FUNCTIONS[astnode.name] = astnode
         else:
             self.IMPORTED_FUNCTIONS[self.modname][astnode.name] = astnode
-        childName = self.getName(astnode)
-        child = doc.createElement(childName)
-        
-        child.appendChild(self.doc.createTextNode(str(astnode.lineno)))
-        parent.appendChild(child)
         
         for node in astnode.body:
-            if not self.HANDLERS[node.__class__](self, doc, child, node):
-                child.childNodes.pop(-1)
+            if not self.handleNode(doc, root, node):
+                root.childNodes.pop(-1)
         
         return 1
     
@@ -223,29 +224,24 @@ class xmlConverter(object):
     def handleGtE(self, doc, parent, astnode):
         pass
     
-    def handleIf(self, doc, parent, astnode):
-        childName = self.getName(astnode)
-        child = doc.createElement(childName)
-        
-        child.appendChild(self.doc.createTextNode(str(astnode.lineno)))
-        parent.appendChild(child)
+    def handleIf(self, doc, root, astnode):
         
         for node in astnode.body:
-            if not self.HANDLERS[node.__class__](self, doc, child, node):
-                child.childNodes.pop(-1)
+            if not self.handleNode(doc, root, node):
+                root.childNodes.pop(-1)
         
-        grandchildName = "else"
-        grandchild = doc.createElement(grandchildName)
+        childName = "else"
+        child = doc.createElement(childName)
         if astnode.orelse:
-            grandchild.appendChild(self.doc.createTextNode(max('-', str(min((node.lineno for node in astnode.orelse if hasattr(node, 'lineno')))-1) )))
-            child.appendChild(grandchild)
+            child.appendChild(self.doc.createTextNode(max('-', str(min((node.lineno for node in astnode.orelse if hasattr(node, 'lineno')))-1) )))
+            root.appendChild(child)
             for node in astnode.orelse:
-                if not self.HANDLERS[node.__class__](self, doc, grandchild, node):
-                    grandchild.childNodes.pop(-1)
+                if not self.handleNode(doc, child, node):
+                    child.childNodes.pop(-1)
         
         return 1
     
-    def handleImport(self, doc, parent, astnode):
+    def handleImport(self, doc, root, astnode):
         for imported in astnode.names:
             if not imported.asname:
                 imported.asname = imported.name
@@ -255,6 +251,7 @@ class xmlConverter(object):
                 if os.path.exists(fpath):
                     x = xmlConverter(fpath, imported=True, modname=imported.asname)
                     x.generateXML()
+        return 1
     
     def handleImportFrom(self, doc, parent, astnode):
         pass
@@ -277,8 +274,13 @@ class xmlConverter(object):
     def handleLambda(self, doc, parent, astnode):
         pass
     
-    def handleList(self, doc, parent, astnode):
-        pass
+    def handleList(self, doc, root, astnode):
+        
+        for node in astnode.elts:
+            if not self.handleNode(doc, root, node):
+                root.childNodes.pop(-1)
+        
+        return 1
     
     def handleListComp(self, doc, parent, astnode):
         pass
@@ -289,18 +291,18 @@ class xmlConverter(object):
     def handleLtE(self, doc, parent, astnode):
         pass
     
-    def handleModule(self, doc, parent, astnode):
-        child = parent
-        child.appendChild(self.doc.createTextNode(str(0)))
+    def handleModule(self, doc, root, astnode):
+        
+        root.appendChild(self.doc.createTextNode(str(0)))
         
         for node in astnode.body:
-            if not self.HANDLERS[node.__class__](self, doc, child, node):
+            if not self.handleNode(doc, root, node):
                 child.childNodes.pop(-1)
         
         return 1
     
-    def handleName(self, doc, parent, astnode):
-        pass
+    def handleName(self, doc, root, astnode):
+        return 1
     
     def handleNotEq(self, doc, parent, astnode):
         pass
@@ -308,11 +310,18 @@ class xmlConverter(object):
     def handleNotIn(self, doc, parent, astnode):
         pass
     
-    def handleNum(self, doc, parent, astnode):
-        pass
+    def handleNum(self, doc, root, astnode):
+        return 1
     
     def handleParam(self, doc, parent, astnode):
         pass
+    
+    def handlePrint(self, doc, root, astnode):
+    	
+    	for node in astnode.values:
+    	    if not self.handleNode(doc, root, node):
+                root.childNodes.pop(-1)
+    	return 1
     
     def handlePyCF_ONLY_AST(self, doc, parent, astnode):
         pass
@@ -341,50 +350,37 @@ class xmlConverter(object):
     def handleSuite(self, doc, parent, astnode):
         pass
     
-    def handleTryExcept(self, doc, parent, astnode):
-        childName = self.getName(astnode)
-        child = doc.createElement(childName)
-        child.appendChild(self.doc.createTextNode(str(astnode.lineno)))
-        parent.appendChild(child)
+    def handleTryExcept(self, doc, root, astnode):
         
         for node in astnode.body:
-            if not self.HANDLERS[node.__class__](self, doc, child, node):
-                child.childNodes.pop(-1)
+            if not self.handleNode(doc, root, node):
+                root.childNodes.pop(-1)
         
         for node in astnode.handlers:
-            childName = self.getName(node)
-            child = doc.createElement(childName)
-            child.appendChild(self.doc.createTextNode(str(astnode.lineno)))
-            parent.appendChild(child)
-            
-            if not self.HANDLERS[node.__class__](self, doc, child, node):
-                child.childNodes.pop(-1)
+            if not self.handleNode(doc, root, node):
+                root.childNodes.pop(-1)
         
         for node in astnode.orelse:
             childName = "else"
             child = doc.createElement(childName)
             child.appendChild(self.doc.createTextNode(str(astnode.lineno)))
-            parent.appendChild(child)
+            root.appendChild(child)
             
-            if not self.HANDLERS[node.__class__](self, doc, child, node):
+            if not self.handleNode(doc, child, node):
                 child.childNodes.pop(-1)
         
         return 1
     
-    def handleTryFinally(self, doc, parent, astnode):
-        childName = self.getName(astnode)
-        child = doc.createElement(childName)
-        child.appendChild(self.doc.createTextNode(str(astnode.lineno)))
-        parent.appendChild(child)
+    def handleTryFinally(self, doc, root, astnode):
         
         for node in astnode.body:
-            if not self.HANDLERS[node.__class__](self, doc, child, node):
-                child.childNodes.pop(-1)
+            if not self.handleNode(doc, root, node):
+                root.childNodes.pop(-1)
         
         childName = "finally"
         child = doc.createElement(childName)
         child.appendChild(self.doc.createTextNode(str(astnode.lineno)))
-        parent.appendChild(child)
+        root.appendChild(child)
         for node in astnode.finalbody:
             if not self.HANDLERS[node.__class__](self, doc, child, node):
                 child.childNodes.pop(-1)
@@ -407,18 +403,6 @@ class xmlConverter(object):
         pass
     
     def handleWith(self, doc, parent, astnode):
-        pass
-    
-    def handle__doc__(self, doc, parent, astnode):
-        pass
-    
-    def handle__name__(self, doc, parent, astnode):
-        pass
-    
-    def handle__package__(self, doc, parent, astnode):
-        pass
-    
-    def handle__version__(self, doc, parent, astnode):
         pass
     
     def handlealias(self, doc, parent, astnode):
@@ -466,10 +450,11 @@ class xmlConverter(object):
     HANDLERS = {
         _ast.Add			: handleAtomic,
         _ast.And			: handleAtomic,
-        _ast.Assert			: handleAtomic,
+        _ast.Assert			: handleAssert,
+        _ast.Attribute		: handleAttribute,
         _ast.Assign			: handleAtomic,
-        _ast.AugAssign		: handleAtomic,
-        _ast.BinOp			: handleAtomic,
+        _ast.AugAssign		: handleAugAssign,
+        _ast.BinOp			: handleBinOp,
         _ast.BitAnd			: handleAtomic,
         _ast.BitOr			: handleAtomic,
         _ast.BitXor			: handleAtomic,
@@ -477,7 +462,7 @@ class xmlConverter(object):
         _ast.Break			: handleAtomic,
         _ast.Call			: handleCall,
         _ast.ClassDef		: handleClassDef,
-        _ast.Compare		: handleAtomic,
+        _ast.Compare		: handleCompare,
         _ast.Continue		: handleAtomic,
         _ast.Del			: handleAtomic,
         _ast.Delete			: handleDelete,
@@ -527,7 +512,7 @@ class xmlConverter(object):
         _ast.Param			: handleParam,
         _ast.Pass			: handleAtomic,
         _ast.Pow			: handleAtomic,
-        _ast.Print			: handleAtomic,
+        _ast.Print			: handlePrint,
         _ast.PyCF_ONLY_AST	: handlePyCF_ONLY_AST,
         _ast.RShift			: handleRShift,
         _ast.Raise			: handleAtomic,
