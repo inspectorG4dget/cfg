@@ -21,17 +21,22 @@ class xmlConverter(object):
             if not modname:
                 raise TypeError("An xmlConverter for an imported module MUST be supplied a module name")
             self.modname = modname
+        self.funcname = None
     
     def generateXML(self, funcname=None, asname=None):
         if funcname is None:
             self.handleNode(self.doc, self.doc, self.root)
         else:
+            if asname is not None:
+                self.funcname = asname
+            else:
+            	self.funcname = funcname
+        		
             for node in self.root.body:
                 if isinstance(node, _ast.FunctionDef) and \
                     node.name == funcname:
                     
                     self.handleNode(self.doc, self.doc, node)
-#                    self.IMPORTED_FUNCTIONS[self.modname][asname] = self.FUNCTIONS[funcname]
                     
     
     def getName(self, astnode):
@@ -230,8 +235,8 @@ class xmlConverter(object):
         if not self.imported:
             self.FUNCTIONS[astnode.name] = astnode
         else:
-            self.IMPORTED_FUNCTIONS[self.modname][astnode.name] = astnode
-            self.IMPORTED_MODULES[astnode.name] = self.modname
+            self.IMPORTED_FUNCTIONS[self.modname][self.funcname] = astnode
+            self.IMPORTED_MODULES[self.funcname] = self.modname
         
         for node in astnode.body:
             if not self.handleNode(doc, root, node):
@@ -277,7 +282,7 @@ class xmlConverter(object):
                     x.generateXML()
         return 1
     
-    def handleImportFrom(self, doc, parent, astnode):
+    def handleImportFrom(self, doc, root, astnode):
         for name in astnode.names:
             for dirname in sys.path:
                 fpath = os.path.join(dirname, astnode.module) +'.py'
@@ -286,6 +291,8 @@ class xmlConverter(object):
                     x.generateXML(name.name, name.asname)
                     break
             self.IMPORTED_FUNCTIONS[astnode.module][name.asname if name.asname else name.name]
+            
+            root.appendChild(doc.createTextNode("from %(modname)s import %(funcname)s as %(alias)s" %{"modname":astnode.module, "funcname":name.name, "alias":name.asname if name.asname else name.name}))
         
         return 1
     
