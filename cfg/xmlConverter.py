@@ -67,8 +67,13 @@ class xmlConverter(object):
                 
         return 1
     
-    def handleAttribute(self, doc, parent, astnode):
-        pass
+    def handleAttribute(self, doc, root, astnode):
+        
+        funcname = astnode.attr
+        modname = astnode.value.id
+        if not self.handleNode(doc, root, self.IMPORTED_FUNCTIONS[modname][funcname]):
+            root.childNodes.pop(-1)
+        return 1
     
     def handleAugAssign(self, doc, root, astnode):
         
@@ -111,19 +116,22 @@ class xmlConverter(object):
     def handleBitXor(self, doc, parent, astnode):
         return 1
     
-    def handleBoolOp(self, doc, parent, astnode):
-        pass
+    def handleBoolOp(self, doc, root, astnode):
+        
+        if not self.handleNode(doc, root, astnode.left):
+            root.childNodes.pop(-1)
+        if not self.handleNode(doc, root, astnode.op):
+            root.childNodes.pop(-1)
+        if not self.handleNode(doc, root, astnode.right):
+            root.childNodes.pop(-1)
     
     def handleCall(self, doc, root, astnode):
         
         if isinstance(astnode.func, _ast.Attribute):	# this is an imported function
-#            self.handleAttribute(doc, child, node)
-            for node in self.FUNCTIONS[astnode.func.id].body:
-                if not self.handleNode(doc, root, node):
-                    root.childNodes.pop(-1)
+            self.handleAttribute(doc, root, astnode.func)
         else:
             for arg in astnode.args:
-                if not self.handlenode(doc, child, arg):
+                if not self.handleNode(doc, root, arg):
                     root.childNodes.pop(-1)
                     
             for node in self.FUNCTIONS[astnode.func.id].body:
@@ -141,7 +149,7 @@ class xmlConverter(object):
         
         for op in astnode.ops:
             if not self.handleNode(doc, root, op):
-        	    root.childNodes.pop(-1)
+                root.childNodes.pop(-1)
        
         for comparator in astnode.comparators:
             if not self.handleNode(doc, root, comparator):
@@ -317,20 +325,21 @@ class xmlConverter(object):
         pass
     
     def handlePrint(self, doc, root, astnode):
-    	
-    	for node in astnode.values:
-    	    if not self.handleNode(doc, root, node):
+        
+        for node in astnode.values:
+            if not self.handleNode(doc, root, node):
                 root.childNodes.pop(-1)
-    	return 1
-    
-    def handlePyCF_ONLY_AST(self, doc, parent, astnode):
-        pass
+        return 1
     
     def handleRShift(self, doc, parent, astnode):
         pass
     
-    def handleRepr(self, doc, parent, astnode):
-        pass
+    def handleRepr(self, doc, root, astnode):
+        
+        if not self.handleNode(doc, root, astnode.value):
+            root.childNodes.pop(-1)
+        
+        return 1
     
     def handleSet(self, doc, parent, astnode):
         pass
@@ -338,14 +347,27 @@ class xmlConverter(object):
     def handleSetComp(self, doc, parent, astnode):
         pass
     
-    def handleSlice(self, doc, parent, astnode):
-        pass
+    def handleSlice(self, doc, root, astnode):
+        if not self.handleNode(doc, root, astnode.lower):
+            root.childNodes.pop(-1)
+        if not self.handleNode(doc, root, astnode.step if astnode.step else _ast.Num(1)):
+            root.childNodes.pop(-1)
+        if not self.handleNode(doc, root, astnode.upper):
+            root.childNodes.pop(-1)
+        
+        return 1
     
     def handleSub(self, doc, parent, astnode):
         pass
     
-    def handleSubscript(self, doc, parent, astnode):
-        pass
+    def handleSubscript(self, doc, root, astnode):
+        
+        if not self.handleNode(doc, root, astnode.value):
+            root.childNodes.pop(-1)
+        if not self.handleNode(doc, root, astnode.slice):
+            root.childNodes.pop(-1)
+        
+        return 1
     
     def handleSuite(self, doc, parent, astnode):
         pass
@@ -513,7 +535,6 @@ class xmlConverter(object):
         _ast.Pass			: handleAtomic,
         _ast.Pow			: handleAtomic,
         _ast.Print			: handlePrint,
-        _ast.PyCF_ONLY_AST	: handlePyCF_ONLY_AST,
         _ast.RShift			: handleRShift,
         _ast.Raise			: handleAtomic,
         _ast.Repr			: handleRepr,

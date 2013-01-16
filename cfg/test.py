@@ -1,28 +1,30 @@
-#import utils
-#
-#def bar():
-#	try:
-#		[]+1
-#	except AttributeError:
-#		print 'oops'
-#	else:
-#		print 'woo hoo'
-#	finally:
-#		print 'phew'
-#	print 'done'
-#bar()
+#import utils as ut
+from utils import nodeType
+
 def bar():
-	a += 1
-	for x in [1,2]:
-		print x
-		if x%2:
-			print x**2
-			break
-		else:
-			print x**3
+	nodeType('')
+	try:
+		[]+1
+	except AttributeError:
+		print 'oops'
 	else:
-		print x
-	print "done"
+		print 'woo hoo'
+	finally:
+		print 'phew'
+	print 'done'
+bar()
+#def bar():
+#	a += 1
+#	for x in [1,2]:
+#		print x
+#		if x%2:
+#			print x**2
+#			break
+#		else:
+#			print x**3
+#	else:
+#		print x
+#	print "done"
 #
 #assert(1==bar())
 
