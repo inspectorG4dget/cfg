@@ -1,423 +1,434 @@
 import _ast
 from xml.dom.minidom import Document
 
-FUNCTIONS = {}
+class xmlConverter(object):
 
-def getName(astnode):
-    if hasattr(astnode, '_cfg_type'):
-        return astnode._cfg_type
+    FUNCTIONS = {}
     
-    if isinstance(astnode, _ast.ExceptHandler):
-    	if not astnode.type:
-    		return "except"
-    	else:
-    		return astnode.type.id
-    		
-    name = astnode.__class__.__name__.lower()
-    astnode._cfg_type = name
-    return name
-
-def getRoot(filepath):
-    return compile(open(filename).read(), filename, 'exec', _ast.PyCF_ONLY_AST)
-
-def handleNode(doc, parent, astnode):
-    childName = getName(astnode)
-    child = doc.createElement(childName)
-    if not isinstance(astnode, _ast.Module):
+    def __init__(self, codefilepath, doc=None):
+        if not doc:
+        	doc = Document()
+        self.doc = doc
+        self.root = self.getRoot(codefilepath)
+    
+    def generateXML(self):
+    	self.handleNode(self.doc, self.doc, self.root)
+    
+    def getName(self, astnode):
+        if hasattr(astnode, '_cfg_type'):
+            return astnode._cfg_type
+        
+        if isinstance(astnode, _ast.ExceptHandler):
+            if not astnode.type:
+            	return "except"
+            else:
+            	return astnode.type.id
+            	
+        name = astnode.__class__.__name__.lower()
+        astnode._cfg_type = name
+        return name
+    
+    def getRoot(self, filepath):
+        return compile(open(filename).read(), filename, 'exec', _ast.PyCF_ONLY_AST)
+    
+    def handleNode(self, doc, parent, astnode):
+        childName = self.getName(astnode)
+        child = doc.createElement(childName)
+        if not isinstance(astnode, _ast.Module):
+            try:
+                label = str(astnode.lineno)
+            except:
+                label = childName
+            child.appendChild(self.doc.createTextNode(label))
+        parent.appendChild(child)
+        
+        if not self.HANDLERS[astnode.__class__](self, doc, child, astnode):
+            parent.childNodes.pop(-1)
+        
+        return 1
+       
+    def handleAtomic(self, doc, parent, astnode):
+        childName = self.getName(astnode)
+        child = doc.createElement(childName)
         try:
             label = str(astnode.lineno)
         except:
             label = childName
-        child.appendChild(doc.createTextNode(label))
-    parent.appendChild(child)
-    
-    if not handlers[astnode.__class__](doc, child, astnode):
-        parent.childNodes.pop(-1)
-    
-    return 1
-   
-def handleAtomic(doc, parent, astnode):
-    childName = getName(astnode)
-    child = doc.createElement(childName)
-    try:
-        label = str(astnode.lineno)
-    except:
-        label = childName
-    child.appendChild(doc.createTextNode(label))
-    parent.appendChild(child)
-    
-    return 1
-   
-def handleAssert(doc, parent, astnode):
-    childname = getName(astnode)
-    child = doc.createElement(childname)
-    child.appendChild(doc.createTextNode(str(astnode.lineno)))
-    parent.appendChild(child)
-    return 1
-
-def handleAttribute(doc, parent, astnode):
-    pass
-
-def handleAugAssign(doc, parent, astnode):
-    pass
-
-def handleAugLoad(doc, parent, astnode):
-    pass
-
-def handleAugStore(doc, parent, astnode):
-    pass
-
-def handleBinOp(doc, parent, astnode):
-    pass
-
-def handleBitAnd(doc, parent, astnode):
-    pass
-
-def handleBitOr(doc, parent, astnode):
-    pass
-
-def handleBitXor(doc, parent, astnode):
-    pass
-
-def handleBoolOp(doc, parent, astnode):
-    pass
-
-def handleCall(doc, parent, astnode):
-    childName = getName(astnode)
-    child = doc.createElement(childName)
-    child.appendChild(doc.createTextNode(str(astnode.lineno)))
-    parent.appendChild(child)
-    
-    for node in FUNCTIONS[astnode.func.id].body:
-        if not handlers[node.__class__](doc, child, node):
-            child.childNodes.pop(-1)
-    
-    return 1
-
-def handleClassDef(doc, parent, astnode):
-    pass
-
-def handleContinue(doc, parent, astnode):
-    pass
-
-def handleDel(doc, parent, astnode):
-    pass
-
-def handleDelete(doc, parent, astnode):
-    pass
-
-def handleDict(doc, parent, astnode):
-    pass
-
-def handleDictComp(doc, parent, astnode):
-    pass
-
-def handleEllipsis(doc, parent, astnode):
-    pass
-
-def handleExceptHandler(doc, parent, astnode):
-    childName = getName(astnode)
-    child = doc.createElement(childName)
-    
-    child.appendChild(doc.createTextNode(str(astnode.lineno)))
-    parent.appendChild(child)
-    
-    for node in astnode.body:
-        if not handlers[node.__class__](doc, child, node):
-            child.childNodes.pop(-1)
-
-def handleExec(doc, parent, astnode):
-    pass
-
-def handleExpr(doc, parent, astnode):
-    childName = getName(astnode)
-    child = doc.createElement(childName)
-    child.appendChild(doc.createTextNode(str(astnode.lineno)))
-    parent.appendChild(child)
-    
-    if not isinstance(astnode.value, _ast.Call):
-        handleAtomic(doc, child, astnode.value)
-    else:
-        handleCall(doc, child, astnode.value)
-    
-    return 1
-   
-def handleExtSlice(doc, parent, astnode):
-    pass
-
-def handleLoop(doc, parent, astnode):
-    childName = getName(astnode)
-    child = doc.createElement(childName)
-    
-    child.appendChild(doc.createTextNode(str(astnode.lineno)))
-    parent.appendChild(child)
-    
-    for node in astnode.body:
-        if not handlers[node.__class__](doc, child, node):
-            child.childNodes.pop(-1)
-    
-    grandchildName = "else"
-    grandchild = doc.createElement(grandchildName)
-    grandchild.appendChild(doc.createTextNode(max('-', str(min((node.lineno for node in astnode.orelse if hasattr(node, 'lineno')))-1) )))
-    child.appendChild(grandchild)
-    for node in astnode.orelse:
-        if not handlers[node.__class__](doc, grandchild, node):
-            child.childNodes.pop(-1)
-    
-    return 1
-
-def handleFunctionDef(doc, parent, astnode):
-    FUNCTIONS[astnode.name] = astnode
-    childName = getName(astnode)
-    child = doc.createElement(childName)
-    
-    child.appendChild(doc.createTextNode(str(astnode.lineno)))
-    parent.appendChild(child)
-    
-    for node in astnode.body:
-        if not handlers[node.__class__](doc, child, node):
-            child.childNodes.pop(-1)
-    
-    return 1
-
-def handleGeneratorExp(doc, parent, astnode):
-    pass
-
-def handleGlobal(doc, parent, astnode):
-    pass
-
-def handleGtE(doc, parent, astnode):
-    pass
-
-def handleIf(doc, parent, astnode):
-    childName = getName(astnode)
-    child = doc.createElement(childName)
-    
-    child.appendChild(doc.createTextNode(str(astnode.lineno)))
-    parent.appendChild(child)
-    
-    for node in astnode.body:
-        if not handlers[node.__class__](doc, child, node):
-            child.childNodes.pop(-1)
-    
-    grandchildName = "else"
-    grandchild = doc.createElement(grandchildName)
-    grandchild.appendChild(doc.createTextNode(max('-', str(min((node.lineno for node in astnode.orelse if hasattr(node, 'lineno')))-1) )))
-    child.appendChild(grandchild)
-    for node in astnode.orelse:
-        if not handlers[node.__class__](doc, grandchild, node):
-            grandchild.childNodes.pop(-1)
-    
-    return 1
-
-def handleImportFrom(doc, parent, astnode):
-    pass
-
-def handleIndex(doc, parent, astnode):
-    pass
-
-def handleInteractive(doc, parent, astnode):
-    pass
-
-def handleInvert(doc, parent, astnode):
-    pass
-
-def handleIsNot(doc, parent, astnode):
-    pass
-
-def handleLShift(doc, parent, astnode):
-    pass
-
-def handleLambda(doc, parent, astnode):
-    pass
-
-def handleList(doc, parent, astnode):
-    pass
-
-def handleListComp(doc, parent, astnode):
-    pass
-
-def handleLoad(doc, parent, astnode):
-    pass
-
-def handleLtE(doc, parent, astnode):
-    pass
-
-def handleModule(doc, parent, astnode):
-    child = parent
-    child.appendChild(doc.createTextNode(str(0)))
-    
-    for node in astnode.body:
-        if not handlers[node.__class__](doc, child, node):
-            child.childNodes.pop(-1)
-    
-    return 1
-
-def handleName(doc, parent, astnode):
-    pass
-
-def handleNotEq(doc, parent, astnode):
-    pass
-
-def handleNotIn(doc, parent, astnode):
-    pass
-
-def handleNum(doc, parent, astnode):
-    pass
-
-def handleParam(doc, parent, astnode):
-    pass
-
-def handlePyCF_ONLY_AST(doc, parent, astnode):
-    pass
-
-def handleRShift(doc, parent, astnode):
-    pass
-
-def handleRepr(doc, parent, astnode):
-    pass
-
-def handleSet(doc, parent, astnode):
-    pass
-
-def handleSetComp(doc, parent, astnode):
-    pass
-
-def handleSlice(doc, parent, astnode):
-    pass
-
-def handleSub(doc, parent, astnode):
-    pass
-
-def handleSubscript(doc, parent, astnode):
-    pass
-
-def handleSuite(doc, parent, astnode):
-    pass
-
-def handleTryExcept(doc, parent, astnode):
-    childName = getName(astnode)
-    child = doc.createElement(childName)
-    child.appendChild(doc.createTextNode(str(astnode.lineno)))
-    parent.appendChild(child)
-    
-    for node in astnode.body:
-        if not handlers[node.__class__](doc, child, node):
-            child.childNodes.pop(-1)
-    
-    for node in astnode.handlers:
-        childName = getName(node)
-        child = doc.createElement(childName)
-    	child.appendChild(doc.createTextNode(str(astnode.lineno)))
+        child.appendChild(self.doc.createTextNode(label))
         parent.appendChild(child)
         
-        if not handlers[node.__class__](doc, child, node):
-            child.childNodes.pop(-1)
+        return 1
+       
+    def handleAssert(self, doc, parent, astnode):
+        childname = self.getName(astnode)
+        child = doc.createElement(childname)
+        child.appendChild(self.doc.createTextNode(str(astnode.lineno)))
+        parent.appendChild(child)
+        return 1
     
-    for node in astnode.orelse:
-        childName = "else"
+    def handleAttribute(self, doc, parent, astnode):
+        pass
+    
+    def handleAugAssign(self, doc, parent, astnode):
+        pass
+    
+    def handleAugLoad(self, doc, parent, astnode):
+        pass
+    
+    def handleAugStore(self, doc, parent, astnode):
+        pass
+    
+    def handleBinOp(self, doc, parent, astnode):
+        pass
+    
+    def handleBitAnd(self, doc, parent, astnode):
+        pass
+    
+    def handleBitOr(self, doc, parent, astnode):
+        pass
+    
+    def handleBitXor(self, doc, parent, astnode):
+        pass
+    
+    def handleBoolOp(self, doc, parent, astnode):
+        pass
+    
+    def handleCall(self, doc, parent, astnode):
+        childName = self.getName(astnode)
         child = doc.createElement(childName)
-    	child.appendChild(doc.createTextNode(str(astnode.lineno)))
+        child.appendChild(self.doc.createTextNode(str(astnode.lineno)))
         parent.appendChild(child)
         
-        if not handlers[node.__class__](doc, child, node):
-            child.childNodes.pop(-1)
+        for node in self.FUNCTIONS[astnode.func.id].body:
+            if not self.HANDLERS[node.__class__](self, doc, child, node):
+                child.childNodes.pop(-1)
+        
+        return 1
     
-    return 1
-
-def handleTryFinally(doc, parent, astnode):
-    childName = getName(astnode)
-    child = doc.createElement(childName)
-    child.appendChild(doc.createTextNode(str(astnode.lineno)))
-    parent.appendChild(child)
+    def handleClassDef(self, doc, parent, astnode):
+        pass
     
-    for node in astnode.body:
-        if not handlers[node.__class__](doc, child, node):
-            child.childNodes.pop(-1)
+    def handleContinue(self, doc, parent, astnode):
+        pass
     
-    childName = "finally"
-    child = doc.createElement(childName)
-    child.appendChild(doc.createTextNode(str(astnode.lineno)))
-    parent.appendChild(child)
-    for node in astnode.finalbody:
-    	if not handlers[node.__class__](doc, child, node):
-            child.childNodes.pop(-1)
+    def handleDel(self, doc, parent, astnode):
+        pass
     
-    return 1
-
-def handleTuple(doc, parent, astnode):
-    pass
-
-def handleUAdd(doc, parent, astnode):
-    pass
-
-def handleUSub(doc, parent, astnode):
-    pass
-
-def handleUnaryOp(doc, parent, astnode):
-    pass
-
-def handleWhile(doc, parent, astnode):
-    pass
-
-def handleWith(doc, parent, astnode):
-    pass
-
-def handle__doc__(doc, parent, astnode):
-    pass
-
-def handle__name__(doc, parent, astnode):
-    pass
-
-def handle__package__(doc, parent, astnode):
-    pass
-
-def handle__version__(doc, parent, astnode):
-    pass
-
-def handlealias(doc, parent, astnode):
-    pass
-
-def handlearguments(doc, parent, astnode):
-    pass
-
-def handleboolop(doc, parent, astnode):
-    pass
-
-def handlecmpop(doc, parent, astnode):
-    pass
-
-def handlecomprehension(doc, parent, astnode):
-    pass
-
-def handleexcepthandler(doc, parent, astnode):
-    pass
-
-def handleexpr(doc, parent, astnode):
-    pass
-
-def handleexpr_context(doc, parent, astnode):
-    pass
-
-def handlekeyword(doc, parent, astnode):
-    pass
-
-def handlemod(doc, parent, astnode):
-    pass
-
-def handleoperator(doc, parent, astnode):
-    pass
-
-def handleslice(doc, parent, astnode):
-    pass
-
-def handlestmt(doc, parent, astnode):
-    pass
-
-def handleunaryop(doc, parent, astnode):
-    pass
-   
-handlers = {
+    def handleDelete(self, doc, parent, astnode):
+        pass
+    
+    def handleDict(self, doc, parent, astnode):
+        pass
+    
+    def handleDictComp(self, doc, parent, astnode):
+        pass
+    
+    def handleEllipsis(self, doc, parent, astnode):
+        pass
+    
+    def handleExceptHandler(self, doc, parent, astnode):
+        childName = self.getName(astnode)
+        child = doc.createElement(childName)
+        
+        child.appendChild(self.doc.createTextNode(str(astnode.lineno)))
+        parent.appendChild(child)
+        
+        for node in astnode.body:
+            if not self.HANDLERS[node.__class__](self, doc, child, node):
+                child.childNodes.pop(-1)
+    
+    def handleExec(self, doc, parent, astnode):
+        pass
+    
+    def handleExpr(self, doc, parent, astnode):
+        childName = self.getName(astnode)
+        child = doc.createElement(childName)
+        child.appendChild(self.doc.createTextNode(str(astnode.lineno)))
+        parent.appendChild(child)
+        
+        if not isinstance(astnode.value, _ast.Call):
+            self.handleAtomic(self.doc, child, astnode.value)
+        else:
+            self.handleCall(self.doc, child, astnode.value)
+        
+        return 1
+       
+    def handleExtSlice(self, doc, parent, astnode):
+        pass
+    
+    def handleLoop(self, doc, parent, astnode):
+        childName = self.getName(astnode)
+        child = doc.createElement(childName)
+        
+        child.appendChild(self.doc.createTextNode(str(astnode.lineno)))
+        parent.appendChild(child)
+        
+        for node in astnode.body:
+            if not self.HANDLERS[node.__class__](self, doc, child, node):
+                child.childNodes.pop(-1)
+        
+        grandchildName = "else"
+        grandchild = doc.createElement(grandchildName)
+        grandchild.appendChild(self.doc.createTextNode(max('-', str(min((node.lineno for node in astnode.orelse if hasattr(node, 'lineno')))-1) )))
+        child.appendChild(grandchild)
+        for node in astnode.orelse:
+            if not self.HANDLERS[node.__class__](self, doc, grandchild, node):
+                child.childNodes.pop(-1)
+        
+        return 1
+    
+    def handleFunctionDef(self, doc, parent, astnode):
+        self.FUNCTIONS[astnode.name] = astnode
+        childName = self.getName(astnode)
+        child = doc.createElement(childName)
+        
+        child.appendChild(self.doc.createTextNode(str(astnode.lineno)))
+        parent.appendChild(child)
+        
+        for node in astnode.body:
+            if not self.HANDLERS[node.__class__](self, doc, child, node):
+                child.childNodes.pop(-1)
+        
+        return 1
+    
+    def handleGeneratorExp(self, doc, parent, astnode):
+        pass
+    
+    def handleGlobal(self, doc, parent, astnode):
+        pass
+    
+    def handleGtE(self, doc, parent, astnode):
+        pass
+    
+    def handleIf(self, doc, parent, astnode):
+        childName = self.getName(astnode)
+        child = doc.createElement(childName)
+        
+        child.appendChild(self.doc.createTextNode(str(astnode.lineno)))
+        parent.appendChild(child)
+        
+        for node in astnode.body:
+            if not self.HANDLERS[node.__class__](self, doc, child, node):
+                child.childNodes.pop(-1)
+        
+        grandchildName = "else"
+        grandchild = doc.createElement(grandchildName)
+        grandchild.appendChild(self.doc.createTextNode(max('-', str(min((node.lineno for node in astnode.orelse if hasattr(node, 'lineno')))-1) )))
+        child.appendChild(grandchild)
+        for node in astnode.orelse:
+            if not self.HANDLERS[node.__class__](self, doc, grandchild, node):
+                grandchild.childNodes.pop(-1)
+        
+        return 1
+    
+    def handleImportFrom(self, doc, parent, astnode):
+        pass
+    
+    def handleIndex(self, doc, parent, astnode):
+        pass
+    
+    def handleInteractive(self, doc, parent, astnode):
+        pass
+    
+    def handleInvert(self, doc, parent, astnode):
+        pass
+    
+    def handleIsNot(self, doc, parent, astnode):
+        pass
+    
+    def handleLShift(self, doc, parent, astnode):
+        pass
+    
+    def handleLambda(self, doc, parent, astnode):
+        pass
+    
+    def handleList(self, doc, parent, astnode):
+        pass
+    
+    def handleListComp(self, doc, parent, astnode):
+        pass
+    
+    def handleLoad(self, doc, parent, astnode):
+        pass
+    
+    def handleLtE(self, doc, parent, astnode):
+        pass
+    
+    def handleModule(self, doc, parent, astnode):
+        child = parent
+        child.appendChild(self.doc.createTextNode(str(0)))
+        
+        for node in astnode.body:
+            if not self.HANDLERS[node.__class__](self, doc, child, node):
+                child.childNodes.pop(-1)
+        
+        return 1
+    
+    def handleName(self, doc, parent, astnode):
+        pass
+    
+    def handleNotEq(self, doc, parent, astnode):
+        pass
+    
+    def handleNotIn(self, doc, parent, astnode):
+        pass
+    
+    def handleNum(self, doc, parent, astnode):
+        pass
+    
+    def handleParam(self, doc, parent, astnode):
+        pass
+    
+    def handlePyCF_ONLY_AST(self, doc, parent, astnode):
+        pass
+    
+    def handleRShift(self, doc, parent, astnode):
+        pass
+    
+    def handleRepr(self, doc, parent, astnode):
+        pass
+    
+    def handleSet(self, doc, parent, astnode):
+        pass
+    
+    def handleSetComp(self, doc, parent, astnode):
+        pass
+    
+    def handleSlice(self, doc, parent, astnode):
+        pass
+    
+    def handleSub(self, doc, parent, astnode):
+        pass
+    
+    def handleSubscript(self, doc, parent, astnode):
+        pass
+    
+    def handleSuite(self, doc, parent, astnode):
+        pass
+    
+    def handleTryExcept(self, doc, parent, astnode):
+        childName = self.getName(astnode)
+        child = doc.createElement(childName)
+        child.appendChild(self.doc.createTextNode(str(astnode.lineno)))
+        parent.appendChild(child)
+        
+        for node in astnode.body:
+            if not self.HANDLERS[node.__class__](self, doc, child, node):
+                child.childNodes.pop(-1)
+        
+        for node in astnode.handlers:
+            childName = self.getName(node)
+            child = doc.createElement(childName)
+            child.appendChild(self.doc.createTextNode(str(astnode.lineno)))
+            parent.appendChild(child)
+            
+            if not self.HANDLERS[node.__class__](self, doc, child, node):
+                child.childNodes.pop(-1)
+        
+        for node in astnode.orelse:
+            childName = "else"
+            child = doc.createElement(childName)
+            child.appendChild(self.doc.createTextNode(str(astnode.lineno)))
+            parent.appendChild(child)
+            
+            if not self.HANDLERS[node.__class__](self, doc, child, node):
+                child.childNodes.pop(-1)
+        
+        return 1
+    
+    def handleTryFinally(self, doc, parent, astnode):
+        childName = self.getName(astnode)
+        child = doc.createElement(childName)
+        child.appendChild(self.doc.createTextNode(str(astnode.lineno)))
+        parent.appendChild(child)
+        
+        for node in astnode.body:
+            if not self.HANDLERS[node.__class__](self, doc, child, node):
+                child.childNodes.pop(-1)
+        
+        childName = "finally"
+        child = doc.createElement(childName)
+        child.appendChild(self.doc.createTextNode(str(astnode.lineno)))
+        parent.appendChild(child)
+        for node in astnode.finalbody:
+            if not self.HANDLERS[node.__class__](self, doc, child, node):
+                child.childNodes.pop(-1)
+        
+        return 1
+    
+    def handleTuple(self, doc, parent, astnode):
+        pass
+    
+    def handleUAdd(self, doc, parent, astnode):
+        pass
+    
+    def handleUSub(self, doc, parent, astnode):
+        pass
+    
+    def handleUnaryOp(self, doc, parent, astnode):
+        pass
+    
+    def handleWhile(self, doc, parent, astnode):
+        pass
+    
+    def handleWith(self, doc, parent, astnode):
+        pass
+    
+    def handle__doc__(self, doc, parent, astnode):
+        pass
+    
+    def handle__name__(self, doc, parent, astnode):
+        pass
+    
+    def handle__package__(self, doc, parent, astnode):
+        pass
+    
+    def handle__version__(self, doc, parent, astnode):
+        pass
+    
+    def handlealias(self, doc, parent, astnode):
+        pass
+    
+    def handlearguments(self, doc, parent, astnode):
+        pass
+    
+    def handleboolop(self, doc, parent, astnode):
+        pass
+    
+    def handlecmpop(self, doc, parent, astnode):
+        pass
+    
+    def handlecomprehension(self, doc, parent, astnode):
+        pass
+    
+    def handleexcepthandler(self, doc, parent, astnode):
+        pass
+    
+    def handleexpr(self, doc, parent, astnode):
+        pass
+    
+    def handleexpr_context(self, doc, parent, astnode):
+        pass
+    
+    def handlekeyword(self, doc, parent, astnode):
+        pass
+    
+    def handlemod(self, doc, parent, astnode):
+        pass
+    
+    def handleoperator(self, doc, parent, astnode):
+        pass
+    
+    def handleslice(self, doc, parent, astnode):
+        pass
+    
+    def handlestmt(self, doc, parent, astnode):
+        pass
+    
+    def handleunaryop(self, doc, parent, astnode):
+        pass
+    
+    HANDLERS = {
         _ast.Add			: handleAtomic,
         _ast.And			: handleAtomic,
         _ast.Assert			: handleAtomic,
@@ -518,16 +529,16 @@ handlers = {
         _ast.slice			: handleslice,
         _ast.stmt			: handlestmt,
         _ast.unaryop		: handleunaryop
-}
+    }
 
 if __name__ == "__main__":
     filename = 'test.py'
     print 'starting'
     
     d = Document()
-    root = getRoot(filename)
-    handleNode(d, d, root)
+    x = xmlConverter(d)
+    x.generateXML()
     
-    print d.toprettyxml('    ')
+    print x.doc.toprettyxml('    ')
     
     print 'done'
