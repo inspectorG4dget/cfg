@@ -9,6 +9,7 @@ class xmlConverter(object):
     FUNCTIONS = {}
     IMPORTS = collections.defaultdict(dict)
     IMPORTED_FUNCTIONS = collections.defaultdict(dict)
+    IMPORTED_MODULES = {}
     
     def __init__(self, codefilepath, imported, modname=None, doc=None):
         if not doc:
@@ -21,8 +22,17 @@ class xmlConverter(object):
                 raise TypeError("An xmlConverter for an imported module MUST be supplied a module name")
             self.modname = modname
     
-    def generateXML(self):
-        self.handleNode(self.doc, self.doc, self.root)
+    def generateXML(self, funcname=None, asname=None):
+        if funcname is None:
+            self.handleNode(self.doc, self.doc, self.root)
+        else:
+            for node in self.root.body:
+                if isinstance(node, _ast.FunctionDef) and \
+                    node.name == funcname:
+                    
+                    self.handleNode(self.doc, self.doc, node)
+#                    self.IMPORTED_FUNCTIONS[self.modname][asname] = self.FUNCTIONS[funcname]
+                    
     
     def getName(self, astnode):
         if hasattr(astnode, '_cfg_type'):
@@ -133,10 +143,15 @@ class xmlConverter(object):
             for arg in astnode.args:
                 if not self.handleNode(doc, root, arg):
                     root.childNodes.pop(-1)
-                    
-            for node in self.FUNCTIONS[astnode.func.id].body:
-                if not self.handleNode(doc, root, node):
-                    root.childNodes.pop(-1)
+            
+            if astnode.func.id in self.FUNCTIONS:
+                for node in self.FUNCTIONS[astnode.func.id].body:
+                    if not self.handleNode(doc, root, node):
+                        root.childNodes.pop(-1)
+            else:
+                for node in self.IMPORTED_FUNCTIONS[self.IMPORTED_MODULES[astnode.func.id]][astnode.func.id].body:
+                    if not self.handleNode(doc, root, node):
+                        root.childNodes.pop(-1)
         
         return 1
     
@@ -144,7 +159,7 @@ class xmlConverter(object):
         pass
     
     def handleCompare(self, doc, root, astnode):
-		
+        
         self.handleNode(doc, root, astnode.left)
         
         for op in astnode.ops:
@@ -216,6 +231,7 @@ class xmlConverter(object):
             self.FUNCTIONS[astnode.name] = astnode
         else:
             self.IMPORTED_FUNCTIONS[self.modname][astnode.name] = astnode
+            self.IMPORTED_MODULES[astnode.name] = self.modname
         
         for node in astnode.body:
             if not self.handleNode(doc, root, node):
@@ -262,7 +278,16 @@ class xmlConverter(object):
         return 1
     
     def handleImportFrom(self, doc, parent, astnode):
-        pass
+        for name in astnode.names:
+            for dirname in sys.path:
+                fpath = os.path.join(dirname, astnode.module) +'.py'
+                if os.path.exists(fpath):
+                    x = xmlConverter(fpath, imported=True, modname=astnode.module)
+                    x.generateXML(name.name, name.asname)
+                    break
+            self.IMPORTED_FUNCTIONS[astnode.module][name.asname if name.asname else name.name]
+        
+        return 1
     
     def handleIndex(self, doc, parent, astnode):
         pass
@@ -580,6 +605,6 @@ if __name__ == "__main__":
     x = xmlConverter(filename, False)
     x.generateXML()
     
-    print x.doc.toprettyxml('|   ')
+    print x.doc.toprettyxml(':   ')
     
     print 'done'

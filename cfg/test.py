@@ -1,8 +1,8 @@
 #import utils as ut
-from utils import nodeType
+from utils import nodeType as nt
 
 def bar():
-	nodeType('')
+	nt('')
 	try:
 		[]+1
 	except AttributeError:
