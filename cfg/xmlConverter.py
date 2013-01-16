@@ -1,18 +1,28 @@
 import _ast
 from xml.dom.minidom import Document
+import collections
+import sys
+import os
 
 class xmlConverter(object):
 
     FUNCTIONS = {}
+    IMPORTS = collections.defaultdict(dict)
+    IMPORTED_FUNCTIONS = collections.defaultdict(dict)
     
-    def __init__(self, codefilepath, doc=None):
+    def __init__(self, codefilepath, imported, modname=None, doc=None):
         if not doc:
-        	doc = Document()
+            doc = Document()
         self.doc = doc
         self.root = self.getRoot(codefilepath)
+        self.imported = imported
+        if self.imported:
+            if not modname:
+                raise TypeError("An xmlConverter for an imported module MUST be supplied a module name")
+            self.modname = modname
     
     def generateXML(self):
-    	self.handleNode(self.doc, self.doc, self.root)
+        self.handleNode(self.doc, self.doc, self.root)
     
     def getName(self, astnode):
         if hasattr(astnode, '_cfg_type'):
@@ -20,16 +30,16 @@ class xmlConverter(object):
         
         if isinstance(astnode, _ast.ExceptHandler):
             if not astnode.type:
-            	return "except"
+                return "except"
             else:
-            	return astnode.type.id
-            	
+                return astnode.type.id
+                
         name = astnode.__class__.__name__.lower()
         astnode._cfg_type = name
         return name
     
     def getRoot(self, filepath):
-        return compile(open(filename).read(), filename, 'exec', _ast.PyCF_ONLY_AST)
+        return compile(open(filepath).read(), filepath, 'exec', _ast.PyCF_ONLY_AST)
     
     def handleNode(self, doc, parent, astnode):
         childName = self.getName(astnode)
@@ -99,9 +109,18 @@ class xmlConverter(object):
         child.appendChild(self.doc.createTextNode(str(astnode.lineno)))
         parent.appendChild(child)
         
-        for node in self.FUNCTIONS[astnode.func.id].body:
-            if not self.HANDLERS[node.__class__](self, doc, child, node):
-                child.childNodes.pop(-1)
+        if isinstance(astnode.func, _ast.Attribute):	# this is an imported function
+            for node in self.FUNCTIONS[astnode.func.id].body:
+                if not self.HANDLERS[node.__class__](self, doc, child, node):
+                    child.childNodes.pop(-1)
+        else:
+            for arg in astnode.args:
+                if not self.HANDLERS[arg.__class__](self, doc, child, arg):
+                    child.childNodes.pop(-1)
+                    
+            for node in self.FUNCTIONS[astnode.func.id].body:
+                if not self.HANDLERS[node.__class__](self, doc, child, node):
+                    child.childNodes.pop(-1)
         
         return 1
     
@@ -178,7 +197,11 @@ class xmlConverter(object):
         return 1
     
     def handleFunctionDef(self, doc, parent, astnode):
-        self.FUNCTIONS[astnode.name] = astnode
+        
+        if not self.imported:
+            self.FUNCTIONS[astnode.name] = astnode
+        else:
+            self.IMPORTED_FUNCTIONS[self.modname][astnode.name] = astnode
         childName = self.getName(astnode)
         child = doc.createElement(childName)
         
@@ -213,13 +236,25 @@ class xmlConverter(object):
         
         grandchildName = "else"
         grandchild = doc.createElement(grandchildName)
-        grandchild.appendChild(self.doc.createTextNode(max('-', str(min((node.lineno for node in astnode.orelse if hasattr(node, 'lineno')))-1) )))
-        child.appendChild(grandchild)
-        for node in astnode.orelse:
-            if not self.HANDLERS[node.__class__](self, doc, grandchild, node):
-                grandchild.childNodes.pop(-1)
+        if astnode.orelse:
+            grandchild.appendChild(self.doc.createTextNode(max('-', str(min((node.lineno for node in astnode.orelse if hasattr(node, 'lineno')))-1) )))
+            child.appendChild(grandchild)
+            for node in astnode.orelse:
+                if not self.HANDLERS[node.__class__](self, doc, grandchild, node):
+                    grandchild.childNodes.pop(-1)
         
         return 1
+    
+    def handleImport(self, doc, parent, astnode):
+        for imported in astnode.names:
+            if not imported.asname:
+                imported.asname = imported.name
+            self.IMPORTS[imported.asname] = imported.name
+            for dir in sys.path:
+                fpath = os.path.join(dir, self.IMPORTS[imported.asname]) + '.py'
+                if os.path.exists(fpath):
+                    x = xmlConverter(fpath, imported=True, modname=imported.asname)
+                    x.generateXML()
     
     def handleImportFrom(self, doc, parent, astnode):
         pass
@@ -465,7 +500,7 @@ class xmlConverter(object):
         _ast.GtE			: handleAtomic,
         _ast.If				: handleIf,
         _ast.IfExp			: handleAtomic,
-        _ast.Import			: handleAtomic,
+        _ast.Import			: handleImport,
         _ast.ImportFrom		: handleImportFrom,
         _ast.In				: handleAtomic,
         _ast.Index			: handleIndex,
@@ -535,10 +570,10 @@ if __name__ == "__main__":
     filename = 'test.py'
     print 'starting'
     
-    d = Document()
-    x = xmlConverter(d)
+#    d = Document()
+    x = xmlConverter(filename, False)
     x.generateXML()
     
-    print x.doc.toprettyxml('    ')
+    print x.doc.toprettyxml('|   ')
     
     print 'done'

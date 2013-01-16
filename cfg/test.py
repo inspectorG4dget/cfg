@@ -1,3 +1,5 @@
+#import utils
+
 #def bar():
 #	try:
 #		[]+1
@@ -21,7 +23,8 @@ def bar():
 		print x
 	print "done"
 
-bar()
+bar(
+bar())
 
 #def add(a, b):
 #    return a + b
