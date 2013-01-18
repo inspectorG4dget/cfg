@@ -7,9 +7,7 @@ import os
 class xmlConverter(object):
 
     FUNCTIONS = {}
-    IMPORTS = collections.defaultdict(dict)
-    IMPORTED_FUNCTIONS = collections.defaultdict(dict)
-    IMPORTED_MODULES = {}
+    IMPORTS = {}
     
     def __init__(self, codefilepath, imported, modname=None, doc=None):
         if not doc:
@@ -21,7 +19,8 @@ class xmlConverter(object):
             if not modname:
                 raise TypeError("An xmlConverter for an imported module MUST be supplied a module name")
             self.modname = modname
-        self.funcname = None
+        self.funcname = None # used for handling aliasing the names of imported functions i.e. `from foo import bar as baz`
+        self.funcscope = [] # each item is a tuple: (module, function)
     
     def generateXML(self, funcname=None, asname=None):
         if funcname is None:
@@ -30,8 +29,8 @@ class xmlConverter(object):
             if asname is not None:
                 self.funcname = asname
             else:
-            	self.funcname = funcname
-        		
+                self.funcname = funcname
+                
             for node in self.root.body:
                 if isinstance(node, _ast.FunctionDef) and \
                     node.name == funcname:
@@ -86,8 +85,12 @@ class xmlConverter(object):
         
         funcname = astnode.attr
         modname = astnode.value.id
-        if not self.handleNode(doc, root, self.IMPORTED_FUNCTIONS[modname][funcname]):
-            root.childNodes.pop(-1)
+        
+        if "%s.%s" %(modname, funcname) not in self.funcscope:
+            self.funcscope.append("%s.%s" %(modname, funcname))
+            if not self.handleNode(doc, root, self.FUNCTIONS["%s.%s" %(modname, funcname)]):
+                root.childNodes.pop(-1)
+            self.funcscope.pop(-1)
         return 1
     
     def handleAugAssign(self, doc, root, astnode):
@@ -154,9 +157,13 @@ class xmlConverter(object):
                     if not self.handleNode(doc, root, node):
                         root.childNodes.pop(-1)
             else:
-                for node in self.IMPORTED_FUNCTIONS[self.IMPORTED_MODULES[astnode.func.id]][astnode.func.id].body:
-                    if not self.handleNode(doc, root, node):
-                        root.childNodes.pop(-1)
+                if astnode.func.id not in self.funcscope:
+                    self.funcscope.append("%s.%s" %(self.modname if self.modname else "module", astnode.func.id))
+                    
+                    for node in self.IMPORTED_FUNCTIONS[self.IMPORTED_MODULES[astnode.func.id]][astnode.func.id].body:
+                        if not self.handleNode(doc, root, node):
+                            root.childNodes.pop(-1)
+                    self.funcscope.pop(-1)
         
         return 1
     
@@ -235,8 +242,14 @@ class xmlConverter(object):
         if not self.imported:
             self.FUNCTIONS[astnode.name] = astnode
         else:
-            self.IMPORTED_FUNCTIONS[self.modname][self.funcname] = astnode
-            self.IMPORTED_MODULES[self.funcname] = self.modname
+            if self.funcname:
+                self.FUNCTIONS[self.funcname] = astnode
+            else:
+                self.FUNCTIONS["%s.%s" %(self.modname, astnode.name)] = astnode
+        
+        for node in astnode.args.args:
+            if not self.handleNode(doc, root, node):
+                root.childNodes.pop(-1)
         
         for node in astnode.body:
             if not self.handleNode(doc, root, node):
@@ -280,6 +293,7 @@ class xmlConverter(object):
                 if os.path.exists(fpath):
                     x = xmlConverter(fpath, imported=True, modname=imported.asname)
                     x.generateXML()
+                    break
         return 1
     
     def handleImportFrom(self, doc, root, astnode):
@@ -290,9 +304,9 @@ class xmlConverter(object):
                     x = xmlConverter(fpath, imported=True, modname=astnode.module)
                     x.generateXML(name.name, name.asname)
                     break
-            self.IMPORTED_FUNCTIONS[astnode.module][name.asname if name.asname else name.name]
             
-            root.appendChild(doc.createTextNode("from %(modname)s import %(funcname)s as %(alias)s" %{"modname":astnode.module, "funcname":name.name, "alias":name.asname if name.asname else name.name}))
+            root.appendChild(doc.createTextNode("from %(modname)s import %(funcname)s as %(alias)s" 
+                                            %{"modname":astnode.module, "funcname":name.name, "alias":name.asname if name.asname else name.name}))
         
         return 1
     
