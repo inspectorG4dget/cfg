@@ -1,12 +1,13 @@
-import utils
-#from utils import nodeType as nt
+#import utils
+from utils import nodeType as nt
+from utils import nodeType as nt
 
 def bar():
-#	nt('')
+	nt('')
 #	nodeType('')
-	utils.nodeType('')
+#	utils.nodeType('')
 	try:
-		[]+1
+		1+1
 	except AttributeError:
 		print 'oops'
 	else:
@@ -15,7 +16,6 @@ def bar():
 		print 'phew'
 	print 'done'
 	bar()
-bar()
 
 #def bar():
 #	a += 1

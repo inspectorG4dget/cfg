@@ -7,7 +7,7 @@ import os
 class xmlConverter(object):
 
     FUNCTIONS = {}
-    IMPORTS = {}
+    IMPORTS = collections.defaultdict(lambda : None) # also functions as the import stack to avoid expanding redundant imports
     callstack = [] # each item is an _ast object
     depth = 0
     
@@ -105,19 +105,11 @@ class xmlConverter(object):
                 if not self.handleNode(doc, root, self.FUNCTIONS["%s.%s" %(modname, funcname)]):
                     root.childNodes.pop(-1)
         else:
-        	root.appendChild(self.doc.createTextNode("loopback to %s" %funcname))
+            root.appendChild(self.doc.createTextNode("loopback to %s" %funcname))
                 
         if popcall:
             self.callstack.pop(-1)
                 
-#        if handle:
-#            if "%s.%s" %(modname, funcname) not in self.callstack:
-#                self.callstack.append("%s.%s" %(modname, funcname))
-#                if not self.handleNode(doc, root, self.FUNCTIONS["%s.%s" %(modname, funcname)]):
-#                    root.childNodes.pop(-1)
-#                self.callstack.pop(-1)
-#        return 1
-    
     def handleAugAssign(self, doc, root, astnode):
         
         if not self.handleNode(doc, root, astnode.target):
@@ -194,7 +186,7 @@ class xmlConverter(object):
                     if not self.handleNode(doc, root, node):
                         root.childNodes.pop(-1)
             else:
-            	root.appendChild(self.doc.createTextNode("loopback to %s" %astnode.func.id))
+                root.appendChild(self.doc.createTextNode("loopback to %s" %astnode.func.id))
                     
             if popcall:
                 self.callstack.pop(-1)
@@ -317,30 +309,39 @@ class xmlConverter(object):
         
         return 1
     
-    def handleImport(self, doc, root, astnode):
+    def handleImport(self, doc, root, astnode): # TODO: Expand class and function defs inline
         for imported in astnode.names:
-            if not imported.asname:
-                imported.asname = imported.name
-            self.IMPORTS[imported.asname] = imported.name
-            for dir in sys.path:
-                fpath = os.path.join(dir, self.IMPORTS[imported.asname]) + '.py'
-                if os.path.exists(fpath):
-                    x = xmlConverter(fpath, imported=True, modname=imported.asname)
-                    x.generateXML()
-                    break
+            if self.IMPORTS[imported.asname] != imported.name:
+                self.IMPORTS[imported.asname] = imported.name
+                if not imported.asname:
+                    imported.asname = imported.name
+                for dir in sys.path:
+                    fpath = os.path.join(dir, self.IMPORTS[imported.asname]) + '.py'
+                    if os.path.exists(fpath):
+                        x = xmlConverter(fpath, imported=True, modname=imported.asname)
+                        x.generateXML()
+                        break
+        else:
+            root.appendChild(self.doc.createTextNode("Repeat import of %s as %s skipped" %(imported.name, imported.asname)))
+        
         return 1
     
     def handleImportFrom(self, doc, root, astnode):
         for name in astnode.names:
-            for dirname in sys.path:
-                fpath = os.path.join(dirname, astnode.module) +'.py'
-                if os.path.exists(fpath):
-                    x = xmlConverter(fpath, imported=True, modname=astnode.module)
-                    x.generateXML(name.name, name.asname)
-                    break
-            
-            root.appendChild(doc.createTextNode("from %(modname)s import %(funcname)s as %(alias)s" 
-                                            %{"modname":astnode.module, "funcname":name.name, "alias":name.asname if name.asname else name.name}))
+            if self.IMPORTS[name.asname] != "%s.%s" %(astnode.module, name.name):
+                self.IMPORTS[name.asname] = "%s.%s" %(astnode.module, name.name)
+                for dirname in sys.path:
+                    fpath = os.path.join(dirname, astnode.module) +'.py'
+                    if os.path.exists(fpath):
+                        x = xmlConverter(fpath, imported=True, modname=astnode.module)
+                        x.generateXML(name.name, name.asname)
+                        break
+                
+                root.appendChild(doc.createTextNode("from %(modname)s import %(funcname)s as %(alias)s" 
+                                                %{"modname":astnode.module, "funcname":name.name, "alias":name.asname if name.asname else name.name}))
+            else:
+                root.appendChild(doc.createTextNode("Repeat import from %(modname)s of %(funcname)s as %(alias)s skipped" 
+                                                %{"modname":astnode.module, "funcname":name.name, "alias":name.asname if name.asname else name.name}))
         
         return 1
     
@@ -656,7 +657,7 @@ if __name__ == "__main__":
     filename = 'test.py'
     print 'starting'
     
-#    d = Document()
+    d = Document()
     x = xmlConverter(filename, False)
     x.generateXML()
     
