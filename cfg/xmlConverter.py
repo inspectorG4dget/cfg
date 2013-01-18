@@ -8,6 +8,8 @@ class xmlConverter(object):
 
     FUNCTIONS = {}
     IMPORTS = {}
+    callstack = [] # each item is an _ast object
+    depth = 0
     
     def __init__(self, codefilepath, imported, modname=None, doc=None):
         if not doc:
@@ -15,12 +17,12 @@ class xmlConverter(object):
         self.doc = doc
         self.root = self.getRoot(codefilepath)
         self.imported = imported
+        self.modname = None
         if self.imported:
             if not modname:
                 raise TypeError("An xmlConverter for an imported module MUST be supplied a module name")
             self.modname = modname
         self.funcname = None # used for handling aliasing the names of imported functions i.e. `from foo import bar as baz`
-        self.funcscope = [] # each item is a tuple: (module, function)
     
     def generateXML(self, funcname=None, asname=None):
         if funcname is None:
@@ -86,12 +88,35 @@ class xmlConverter(object):
         funcname = astnode.attr
         modname = astnode.value.id
         
-        if "%s.%s" %(modname, funcname) not in self.funcscope:
-            self.funcscope.append("%s.%s" %(modname, funcname))
-            if not self.handleNode(doc, root, self.FUNCTIONS["%s.%s" %(modname, funcname)]):
-                root.childNodes.pop(-1)
-            self.funcscope.pop(-1)
-        return 1
+        handle = True
+        popcall = False
+        if isinstance(astnode, _ast.Call): 
+            if "%s.%s" %(modname, funcname) in self.callstack:
+                handle = False
+                if "%s.%s" %(modname, funcname) == self.callstack[-1]:
+                    self.callstack.append("%s.%s" %(modname, funcname))
+                    popcall = True
+            else:
+                self.callstack.append("%s.%s" %(modname, funcname))
+                popcall = True
+        
+        if handle:
+            for node in self.FUNCTIONS["%s.%s" %(modname, funcname)].body:
+                if not self.handleNode(doc, root, self.FUNCTIONS["%s.%s" %(modname, funcname)]):
+                    root.childNodes.pop(-1)
+        else:
+        	root.appendChild(self.doc.createTextNode("loopback to %s" %funcname))
+                
+        if popcall:
+            self.callstack.pop(-1)
+                
+#        if handle:
+#            if "%s.%s" %(modname, funcname) not in self.callstack:
+#                self.callstack.append("%s.%s" %(modname, funcname))
+#                if not self.handleNode(doc, root, self.FUNCTIONS["%s.%s" %(modname, funcname)]):
+#                    root.childNodes.pop(-1)
+#                self.callstack.pop(-1)
+#        return 1
     
     def handleAugAssign(self, doc, root, astnode):
         
@@ -152,18 +177,27 @@ class xmlConverter(object):
                 if not self.handleNode(doc, root, arg):
                     root.childNodes.pop(-1)
             
-            if astnode.func.id in self.FUNCTIONS:
+            handle = True
+            popcall = False
+            if isinstance(astnode, _ast.Call): 
+                if "%s.%s" %(self.modname if self.modname else "module", astnode.func.id) in self.callstack:
+                    handle = False
+                    if "%s.%s" %(self.modname if self.modname else "module", astnode.func.id) == self.callstack[-1]:
+                        self.callstack.append("%s.%s" %(self.modname if self.modname else "module", astnode.func.id))
+                        popcall = True
+                else:
+                    self.callstack.append("%s.%s" %(self.modname if self.modname else "module", astnode.func.id))
+                    popcall = True
+            
+            if handle:
                 for node in self.FUNCTIONS[astnode.func.id].body:
                     if not self.handleNode(doc, root, node):
                         root.childNodes.pop(-1)
             else:
-                if astnode.func.id not in self.funcscope:
-                    self.funcscope.append("%s.%s" %(self.modname if self.modname else "module", astnode.func.id))
+            	root.appendChild(self.doc.createTextNode("loopback to %s" %astnode.func.id))
                     
-                    for node in self.IMPORTED_FUNCTIONS[self.IMPORTED_MODULES[astnode.func.id]][astnode.func.id].body:
-                        if not self.handleNode(doc, root, node):
-                            root.childNodes.pop(-1)
-                    self.funcscope.pop(-1)
+            if popcall:
+                self.callstack.pop(-1)
         
         return 1
     
@@ -207,12 +241,12 @@ class xmlConverter(object):
         for node in astnode.body:
             if not self.handleNode(doc, root, node):
                 root.childNodes.pop(-1)
+        return 1
     
     def handleExec(self, doc, parent, astnode):
         pass
     
     def handleExpr(self, doc, root, astnode):
-        
         if not self.handleNode(self.doc, root, astnode.value):
             root.childNodes.pop(-1)
         
@@ -238,7 +272,7 @@ class xmlConverter(object):
         return 1
     
     def handleFunctionDef(self, doc, root, astnode):
-        
+        self.callstack.append("%s.%s" %(self.modname if self.modname else "module", astnode.name))
         if not self.imported:
             self.FUNCTIONS[astnode.name] = astnode
         else:
@@ -254,7 +288,7 @@ class xmlConverter(object):
         for node in astnode.body:
             if not self.handleNode(doc, root, node):
                 root.childNodes.pop(-1)
-        
+        self.callstack.pop(-1)
         return 1
     
     def handleGeneratorExp(self, doc, parent, astnode):
@@ -431,7 +465,7 @@ class xmlConverter(object):
         for node in astnode.orelse:
             childName = "else"
             child = doc.createElement(childName)
-            child.appendChild(self.doc.createTextNode(str(astnode.lineno)))
+            child.appendChild(self.doc.createTextNode(str(node.lineno)))
             root.appendChild(child)
             
             if not self.handleNode(doc, child, node):

@@ -1,9 +1,10 @@
-#import utils as ut
-from utils import nodeType
+import utils
+#from utils import nodeType as nt
 
 def bar():
-	nt('')
-#	ut.nodeType('')
+#	nt('')
+#	nodeType('')
+	utils.nodeType('')
 	try:
 		[]+1
 	except AttributeError:
@@ -13,7 +14,9 @@ def bar():
 	finally:
 		print 'phew'
 	print 'done'
+	bar()
 bar()
+
 #def bar():
 #	a += 1
 #	for x in [1,2]:
