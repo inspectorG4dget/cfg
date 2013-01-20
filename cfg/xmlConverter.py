@@ -23,6 +23,8 @@ class xmlConverter(object):
             if not modname:
                 raise TypeError("An xmlConverter for an imported module MUST be supplied a module name")
             self.modname = modname
+        if not self.modname:
+        	self.modname = "module"
         self.funcname = None # used for handling aliasing the names of imported functions i.e. `from foo import bar as baz`
     
     def generateXML(self, funcname=None, asname=None):
@@ -35,9 +37,7 @@ class xmlConverter(object):
                 self.funcname = funcname
                 
             for node in self.root.body:
-                if isinstance(node, _ast.FunctionDef) and \
-                    node.name == funcname:
-                    
+                if isinstance(node, _ast.FunctionDef) and node.name == funcname:
                     self.handleNode(self.doc, self.doc, node)
                     
     
@@ -183,7 +183,7 @@ class xmlConverter(object):
                     popcall = True
             
             if handle:
-                for node in self.FUNCTIONS[astnode.func.id].body:
+                for node in self.FUNCTIONS["%s.%s" %(self.modname, astnode.func.id)].body:
                     if not self.handleNode(doc, root, node):
                         root.childNodes.pop(-1)
             else:
@@ -266,13 +266,7 @@ class xmlConverter(object):
     
     def handleFunctionDef(self, doc, root, astnode):
         self.callstack.append("%s.%s" %(self.modname if self.modname else "module", astnode.name))
-        if not self.imported:
-            self.FUNCTIONS[astnode.name] = astnode
-        else:
-            if self.funcname:
-                self.FUNCTIONS[self.funcname] = astnode
-            else:
-                self.FUNCTIONS["%s.%s" %(self.modname, astnode.name)] = astnode
+        self.FUNCTIONS["%s.%s" %(self.modname, self.funcname if self.funcname else astnode.name)] = astnode
         
         for node in astnode.args.args:
             if not self.handleNode(doc, root, node):
@@ -336,7 +330,6 @@ class xmlConverter(object):
                             if modname == self.IMPORTS[impmodname]:
                                 addFuncs["%s.%s" %(asname, funcname)] = self.FUNCTIONS["%s.%s" %(impmodname, funcname)]
                         self.FUNCTIONS.update(addFuncs)
-#                        self.FUNCTIONS.union("%s.%s" %(asname, funcname) for func in self.FUNCTIONS if func.partition('.')[0] in self.MODULES[modname])
                         root.appendChild(self.doc.createTextNode("Repeat import of %s as %s skipped" %(imported.name, imported.asname)))
             
             else:
@@ -350,9 +343,9 @@ class xmlConverter(object):
                         if funcname.partition('.')[0] == asname:
                             delkeys.append(funcname)
                     for k in delkeys:
-                    	self.FUNCTIONS.pop(k)
-                	# Done Remove all functions imported from this module as well
-                	
+                        self.FUNCTIONS.pop(k)
+                    # Done Remove all functions imported from this module as well
+                    
                     if not self.MODULES[self.IMPORTS[asname]]:
                         self.MODULES.pop(self.IMPORTS[asname])
                 self.IMPORTS[asname] = modname
@@ -369,20 +362,23 @@ class xmlConverter(object):
     
     def handleImportFrom(self, doc, root, astnode): # TODO: Expand class and function defs inline
         for name in astnode.names:
+            if not name.asname:
+            	name.asname = name.name
             if self.IMPORTS[name.asname] != "%s.%s" %(astnode.module, name.name):
                 self.IMPORTS[name.asname] = "%s.%s" %(astnode.module, name.name)
                 for dirname in sys.path:
                     fpath = os.path.join(dirname, astnode.module) +'.py'
                     if os.path.exists(fpath):
-                        x = xmlConverter(fpath, imported=True, modname=astnode.module)
+                        x = xmlConverter(fpath, imported=False, modname=astnode.module)
                         x.generateXML(name.name, name.asname)
                         break
                 
                 root.appendChild(doc.createTextNode("from %(modname)s import %(funcname)s as %(alias)s" 
-                                                %{"modname":astnode.module, "funcname":name.name, "alias":name.asname if name.asname else name.name}))
+                                                %{"modname":astnode.module, "funcname":name.name, "alias":name.asname}))
             else:
                 root.appendChild(doc.createTextNode("Repeat import from %(modname)s of %(funcname)s as %(alias)s skipped" 
-                                                %{"modname":astnode.module, "funcname":name.name, "alias":name.asname if name.asname else name.name}))
+                                                %{"modname":astnode.module, "funcname":name.name, "alias":name.asname}))
+                self.handleNode(self.doc, root, self.FUNCTIONS["module.%s" %name.asname])
         
         return 1
     

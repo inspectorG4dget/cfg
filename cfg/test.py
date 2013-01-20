@@ -1,23 +1,23 @@
-#import utils as ut
-#import utils
-from utils import nodeType as nt
-from utils import nodeType
+import utils as ut
+import utils
+#from utils import nodeType as nt
+#from utils import nodeType
 
-#def bar():
-##	nt('')
-##	nodeType('')
-#	utils.nodeType('')
-#	try:
-#		1+1
-#	except AttributeError:
-#		print 'oops'
-#	else:
-#		print 'woo hoo'
-#	finally:
-#		print 'phew'
-#	print 'done'
-#	bar()
-#bar()
+def bar():
+#	nt('')
+#	nodeType('')
+	utils.nodeType('')
+	try:
+		1+1
+	except AttributeError:
+		print 'oops'
+	else:
+		print 'woo hoo'
+	finally:
+		print 'phew'
+	print 'done'
+	bar()
+bar()
 
 #def bar():
 #	a += 1
