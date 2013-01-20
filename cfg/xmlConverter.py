@@ -28,7 +28,7 @@ class xmlConverter(object):
         self.funcname = None # used for handling aliasing the names of imported functions i.e. `from foo import bar as baz`
     
     def generateXML(self, funcname=None, asname=None):
-        if funcname is None:
+        if funcname is None or funcname == "*":
             self.handleNode(self.doc, self.doc, self.root)
         else:
             if asname is not None:

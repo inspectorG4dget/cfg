@@ -1,12 +1,13 @@
-import utils as ut
-import utils
+#import utils as ut
+#import utils
 #from utils import nodeType as nt
 #from utils import nodeType
+from utils import *
 
 def bar():
 #	nt('')
-#	nodeType('')
-	utils.nodeType('')
+	nodeType('')
+#	utils.nodeType('')
 	try:
 		1+1
 	except AttributeError:
