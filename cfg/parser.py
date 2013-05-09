@@ -66,7 +66,7 @@ class CFGError(Exception):
 
 class ControlFlowGraph(object):
     handlers = {}
-    atomics = set([_ast.Add, _ast.And, _ast.Assign, _ast.Augassign, _ast.Binop, _ast.Bitand, _ast.Bitor, _ast.Bitxor, _ast.Boolop, _ast.Break, _ast.Compare, _ast.Div, _ast.Eq, _ast.Expression, _ast.Floordiv, _ast.Gt, _ast.Gte, _ast.Import, _ast.Importfrom, _ast.In, _ast.Is, _ast.Isnot, _ast.Lshift, _ast.Lt, _ast.Lte, _ast.Mod, _ast.Mult, _ast.Not, _ast.Noteq, _ast.Notin, _ast.Or, _ast.Pass, _ast.Pow, _ast.Print, _ast.Rshift, _ast.Raise, _ast.Return, _ast.Store, _ast.Str, _ast.Unaryop, _ast.Yield])        
+    atomics = set([_ast.Add, _ast.And, _ast.Assign, _ast.AugAssign, _ast.BinOp, _ast.BitAnd, _ast.BitOr, _ast.BitXor, _ast.BoolOp, _ast.Break, _ast.Compare, _ast.Div, _ast.Eq, _ast.Expression, _ast.FloorDiv, _ast.Gt, _ast.GtE, _ast.Import, _ast.ImportFrom, _ast.In, _ast.Is, _ast.IsNot, _ast.LShift, _ast.Lt, _ast.LtE, _ast.Mod, _ast.Mult, _ast.Not, _ast.NotEq, _ast.NotIn, _ast.Or, _ast.Pass, _ast.Pow, _ast.Print, _ast.RShift, _ast.Raise, _ast.Return, _ast.Store, _ast.Str, _ast.UnaryOp, _ast.Yield])        
     
     def __init__(self, filename):
         self.filename = filename #: name of the file containing code to be analyzed

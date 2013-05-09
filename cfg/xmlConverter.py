@@ -256,7 +256,12 @@ class xmlConverter(object):
         
         childName = "else"
         child = doc.createElement(childName)
-        child.appendChild(self.doc.createTextNode(max('-', str(min((node.lineno for node in astnode.orelse if hasattr(node, 'lineno')))-1) )))
+        try:
+        	childTitle = str(min((node.lineno for node in astnode.orelse if hasattr(node, 'lineno')))-1)
+    	except ValueError:
+        	childTitle = '-'
+        child.appendChild(self.doc.createTextNode(childTitle))
+#        child.appendChild(self.doc.createTextNode(max('-', str(min((node.lineno for node in astnode.orelse if hasattr(node, 'lineno')))-1) )))
         root.appendChild(child)
         for node in astnode.orelse:
             if not self.handleNode(doc, child, node):
@@ -288,7 +293,10 @@ class xmlConverter(object):
         pass
     
     def handleIf(self, doc, root, astnode):
-        
+        # new code
+        if not self.handleNode(doc, root, astnode.test):
+            root.childNodes.pop(-1)
+        # /new code
         for node in astnode.body:
             if not self.handleNode(doc, root, node):
                 root.childNodes.pop(-1)
@@ -693,13 +701,15 @@ class xmlConverter(object):
     }
 
 if __name__ == "__main__":
-    filename = 'test.py'
+    filename = '/Users/ashwin/github/local/cfg/cfg/test.py'
     print 'starting'
     
     d = Document()
     x = xmlConverter(filename, False)
     x.generateXML()
     
+#    with open('/Users/ashwin/github/local/cfg/cfg/output.xml', 'w') as f:
+#		f.write(x.doc.toprettyxml('    '))
     print x.doc.toprettyxml(':   ')
     
     print 'done'
