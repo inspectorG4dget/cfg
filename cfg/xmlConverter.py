@@ -708,8 +708,8 @@ if __name__ == "__main__":
     x = xmlConverter(filename, False)
     x.generateXML()
     
-#    with open('/Users/ashwin/github/local/cfg/cfg/output.xml', 'w') as f:
-#		f.write(x.doc.toprettyxml('    '))
+    with open('/Users/ashwin/github/local/cfg/cfg/output.xml', 'w') as f:
+		f.write(x.doc.toprettyxml('    '))
     print x.doc.toprettyxml(':   ')
     
     print 'done'

@@ -1,40 +1,34 @@
 import lxml.etree as ET
-
-from itertools import ifilter
 from collections import defaultdict
-from compiler.ast import Node
-from platform import node
+from Tkconstants import LAST
 
 class CFG:
-	BLACKLIST = set([
-					'add',
-					'divide',
-					'eq',
-					'mod',
-					'multiply',
-					'name',
-					'num',
-					'pow',
-					'str',
-					'subtract',
-					])
 	
-	CONTAINERS = set([
-					'else',
-					])
+	BLACKLIST = set(""" 
+						add
+						eq
+						geq
+						gte
+						leq
+						lte
+						mod
+						name
+						num
+						pow
+						str
+					""".split())
 	
-	LOOPBACKS = set([
-					'for',
-					'while',
-					])
-	
-	LOOPBACKNODES = set()
+	LOOPS = set('for while'.split())
 	
 	def __init__(self, xmlFilePath):
 		self.xml = ET.parse(xmlFilePath).getroot()
 		self.nodes = set()
 		self.edges = defaultdict(set)
-		self.last = set()
+		self.last = set([getLine(self.xml)])
+		
+	def parse(self):
+		for child in self.xml.getchildren():
+			self.handleNode(child)
 	
 	def removeNode(self, node):
 		if node in self.nodes:
@@ -51,166 +45,167 @@ class CFG:
 		if node.tag not in self.BLACKLIST:
 			curr = getLine(node)
 			self.nodes.add(curr)
-			if node.tag in self.LOOPBACKNODES:
-				self.LOOPBACKNODES.add(curr)
-			if curr not in self.last:
-				delete = set()
-				for last in self.last:
-					if curr > last or last in self.LOOPBACKNODES:
-#						if curr == 13: print 'hoo', self.last
-						self.edges[last].add(curr)
-						delete.add(last)
-				self.last -= delete
-				if node.tag not in self.CONTAINERS:
-					self.last.add(curr)
-		
-		if node.tag not in self.BLACKLIST and node.tag not in self.CONTAINERS:
-			self.HANDLERS[node.tag](self, node)
-		for child in (c for c in node.getchildren() if c.tag not in self.BLACKLIST and c.tag not in self.CONTAINERS):
-			self.handleNode(child)
 			delete = set()
-			for last in self.last:
-				if curr > last or last in self.LOOPBACKNODES:
+			if curr not in self.last:
+				for last in self.last:
 					self.edges[last].add(curr)
 					delete.add(last)
-#			if node.tag not in self.BLACKLIST:
-#				self.last.add(curr)
-			self.last -= delete
+				self.last -= delete
 			
-		if node.tag in self.LOOPBACKS:
-			for i in range(getLine(node)+1, getLine(getLastChild(node))+1):
-				if i in self.last:
-					self.last.remove(i)
-			
-		return 1
-		
+			self.last.add(curr)
+			self.HANDLERS[node.tag](self, node)
+	
 	def handleIf(self, node):
-		compares = (c for c in node.getchildren() if c.tag == "compare")
-		for compare in compares:
-			self.handleNode(compare)
-		self.last.update(set(getLine(c) for c in node.getchildren() if c.tag == "compare"))
-		for child in (c for c in node.getchildren() if c.tag in ["else"]): # if body
-			for grandChild in child.getchildren():
-				self.handleNode(grandChild)
-				if grandChild.getnext() not in ['else', 'elif']:
-					self.last.update(set(getLine(c) for c in node.getchildren() if c.tag == "compare"))
+		elseblock = node.getchildren()[-1]
+		handleElse = False
+		if elseblock.text != '-':
+			self.edges[getLine(node)].add(getLine(elseblock.getchildren()[0]))
+			node.remove(elseblock)
+			handleElse = True
 		
-		return 1
-	
-	def handleCompare(self, node):
 		for child in node.getchildren():
+#			self.last.add(getLine(node))
 			self.handleNode(child)
-#		self.last.remove(getLine(node))
-	
-		return 1
-	
-	def handleElse(self, node):
+		
 		for child in node.getchildren():
-			self.handleNode(child)
+			try:
+				self.last.remove(getLine(child))
+			except KeyError:
+				pass
+		self.last.add(getLine(node))
+		
+		if handleElse:
+			for child in elseblock.getchildren():
+				self.handleNode(child)
+			node.append(elseblock)
 	
-		return 1
-
 	def handleLoop(self, node):
-		start = getLine(node)
-		
-		if node.tag == 'for':
-			dels = []
-			for i,child in enumerate(node.getchildren()):
-				if child.tag == 'else' and child.text == '-': # this should really only be the last child, but still ...
-					dels.append(i)
-			for d in dels[::-1]:
-				node.remove(node.getchildren()[d])
-		
+		elseblock = node.getchildren()[-1]
+		node.remove(elseblock)
+		handleElse = False
+		if elseblock.text != '-':
+			handleElse = True
 		for child in node.getchildren():
 			self.handleNode(child)
-		end = getLine(getLastChild(node))
-		self.edges[end].add(start)
-		self.edges[start].add(getLine(node.getnext()))
 		
-		self.last.remove(end)
+		if handleElse:
+			if node.getnext() is not None:
+				self.edges[getLine(node)].add(getLine(elseblock.getchildren()[0]))	
+			for child in elseblock.getchildren():
+				self.handleNode(child)
 		
-		return 1
+	
+	def handleLoopback(self, node, last=None):
+		""" Handle the loopback of final nodes to the looping node
+			`node` does not contain an else child """
+		
+		try:
+			if last is not None:
+				getLine(last.getchildren()[-1])
+			else:
+				last = node.getchildren()[-1]
+		except (IndexError, ValueError) as e:
+			if last.tag != 'break':
+				self.edges[getLine(last)].add(getLine(node))
+			return 1
+		
+		if last.tag not in 'if tryexcept'.split():
+			if last.tag != 'break':
+				self.edges[getLine(last)].add(getLine(node))
+				try:
+					self.last.remove(getLine(last))
+				except KeyError:
+					pass
+		elif last.tag == 'if':
+			elseblock = last.getchildren()[-1]
+			handleElse = False
+			if elseblock.text != '-':
+				handleElse = True
+				last.remove(elseblock)
+			last = last.getchildren()[-1]
+			self.handleLoopback(node, last)
+			
+			if handleElse:
+				self.handleLoopback(node, elseblock.getchildren()[-1])
+		
+		else: # handling a try-finally block. Leaving this as TODO for later
+			pass
+		
+	def handleBreak(self, node):
+		ancestor = node.getparent()
+		while ancestor.tag not in self.LOOPS:
+			ancestor = ancestor.getparent()
+		
+		if ancestor.getnext() is not None:
+			self.edges[getLine(node)].add(getLine(getTop(ancestor.getnext())))	
 	
 	def handleFunctionDef(self, node):
-		return 1
-	
-	def handleExpr(self, node):
-		return 1
-	
-	def handlePrint(self, node):
 		for child in node.getchildren():
-			if not self.handleNode(child):
-				self.removeNode(getLine(node))
-		return 1
-	
-	def handleBinOp(self, node):
-		return 1
-	
-	def handleReturn(self, node):
-		return 1
+			self.handleNode(child)
 	
 	def handleModule(self, node):
 		return 1
 	
+	def handlePrint(self, node):
+		for child in node.getchildren():
+			self.handleNode(child)
+	
+	def handleCompare(self, node):
+		for child in node.getchildren():
+			self.handleNode(child)
+	
 	def handleBinOp(self, node):
-		return 1
-	
+		for child in node.getchildren():
+			self.handleNode(child)
+
 	def handleAugAssign(self, node):
-		return 1
+		for child in node.getchildren():
+			self.handleNode(child)
 	
-	def handleBreak(self, node):
-		next = node
-		while next.tag not in self.LOOPBACKS:
-			next = next.getparent()
-		next = next.getnext()
-		self.edges[getLine(node)].add(getLine(next))
-		self.last.remove(getLine(node))
-	
-	HANDLERS = {'if': handleIf,
+	HANDLERS = {
+				'augassign': handleAugAssign,
+				'binop': handleBinOp,
+				'break': handleBreak,
 				'compare': handleCompare,
-				'else': handleElse,
+#				'else': handleElse,
+#				'expr': handleExpr,
+				'for': handleLoop,
 				'functiondef': handleFunctionDef,
-				'expr': handleExpr,
+				'if': handleIf,
 				'module': handleModule,
 				'print': handlePrint,
-				'binop': handleBinOp,
-				'return': handleReturn,
-				'for': handleLoop,
-				'augassign': handleAugAssign,
-				'break': handleBreak,
+#				'return': handleReturn,
 				}
+
 
 def getLine(node):
 	return int(node.text.strip().partition('\n')[0])
 
-def getLastChild(node, answer=None):
-	""" The default `answer` argument is not depricated.
-		It's used when there are no children."""
-	answer = node
-	for child in node.getchildren():
-		answer = child
-		answer = getLastChild(answer)
-	return answer
-
+def getTop(node):
+	if node.tag != 'tryfinally':
+		return node
+	else:
+		return node.getchildren()[0].getchildren()[0].getchildren[0]
+	
 if __name__ == "__main__":
 	print 'starting'
-	xfilepath = 'output.xml'
-	cfg = CFG(xfilepath)
-	cfg.handleNode(cfg.xml)
 	
 	expected = defaultdict(set)
 	expected[0] = set([32])
 	expected[32] = set([33])
 	expected[33] = set([34])
-	expected[34] = set([35, 41])
+	expected[34] = set([35, 42])
 	expected[35] = set([36])
 	expected[36] = set([37, 40])
 	expected[37] = set([38])
-	expected[38] = set([41])
+	expected[38] = set([43])
 	expected[40] = set([34])
-	expected[41] = set([])
+	expected[42] = set([43])
+	expected[43] = set([])
 	
-	for k in sorted(cfg.nodes):
-		print k, sorted(cfg.edges[k]), '\t', cfg.edges[k] == expected[k], sorted(expected[k]) if cfg.edges[k] != expected[k] else ""
+	xml = 'output.xml'
+	cfg = CFG(xml)
+	cfg.parse()
+	for k in sorted(cfg.edges): print k, sorted(cfg.edges[k]), '\t', cfg.edges[k] == expected[k], '\t', sorted(expected[k]) if cfg.edges[k] != expected[k] else ""
 	
 	print 'done'

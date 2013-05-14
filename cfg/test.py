@@ -38,6 +38,8 @@ def bar():
 			break
 		else:
 			print x**3
+	else:
+		print "wpp"
 	print "done"
 #bar()
 #
