@@ -2,61 +2,50 @@
 <module>
     0
     <functiondef>
-        32
-        <augassign>
-            33
-            <name>33</name>
-            <add>add</add>
-            <num>33</num>
-        </augassign>
-        <for>
-            34
-            <print>
-                35
-                <name>35</name>
-            </print>
-            <if>
-                36
-                <binop>
-                    36
-                    <name>36</name>
-                    <mod>mod</mod>
-                    <num>36</num>
-                </binop>
-                <print>
-                    37
+        16
+        <print>
+            20
+            <str>20</str>
+        </print>
+        <tryfinally>
+            21
+            <tryexcept>
+                21
+                <expr>
+                    22
                     <binop>
-                        37
-                        <name>37</name>
-                        <pow>pow</pow>
-                        <num>37</num>
+                        22
+                        <num>22</num>
+                        <add>add</add>
+                        <num>22</num>
                     </binop>
-                </print>
-                <break>38</break>
-                <else>
-                    39
+                </expr>
+                <AttributeError>
+                    23
                     <print>
-                        40
-                        <binop>
-                            40
-                            <name>40</name>
-                            <pow>pow</pow>
-                            <num>40</num>
-                        </binop>
+                        24
+                        <str>24</str>
+                    </print>
+                </AttributeError>
+                <else>
+                    26
+                    <print>
+                        26
+                        <str>26</str>
                     </print>
                 </else>
-            </if>
-            <else>
-                41
+            </tryexcept>
+            <finally>
+                21
                 <print>
-                    42
-                    <str>42</str>
+                    28
+                    <str>28</str>
                 </print>
-            </else>
-        </for>
+            </finally>
+        </tryfinally>
         <print>
-            43
-            <str>43</str>
+            29
+            <str>29</str>
         </print>
     </functiondef>
 </module>

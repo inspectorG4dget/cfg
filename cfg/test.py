@@ -13,34 +13,35 @@
 #	3+4
 #	return 5
 
-#def bar():
-##	nt('')
+def bar():
+#	nt('')
 #	nodeType('')
-##	utils.nodeType('')
-#	try:
-#		1+1
-#	except AttributeError:
-#		print 'oops'
-#	else:
-#		print 'woo hoo'
-#	finally:
-#		print 'phew'
-#	print 'done'
-##	bar()
+#	utils.nodeType('')
+	print 'hi'
+	try:
+		1+1
+	except AttributeError:
+		print 'oops'
+	else:
+		print 'woo hoo'
+	finally:
+		print 'phew'
+	print 'done'
+#	bar()
 #bar()
 
-def bar():
-	a += 1
-	for x in [1,2]:
-		print x
-		if x%2:
-			print x**2
-			break
-		else:
-			print x**3
-	else:
-		print "wpp"
-	print "done"
+#def bar():
+#	a += 1
+#	for x in [1,2]:
+#		print x
+#		if x%2:
+#			print x**2
+#			break
+#		else:
+#			print x**3
+#	else:
+#		print "wpp"
+#	print "done"
 #bar()
 #
 #assert(1==bar())

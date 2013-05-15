@@ -1,6 +1,8 @@
 import lxml.etree as ET
+import itertools
+
 from collections import defaultdict
-from Tkconstants import LAST
+from copy import deepcopy as clone
 
 class CFG:
 	
@@ -53,7 +55,10 @@ class CFG:
 				self.last -= delete
 			
 			self.last.add(curr)
-			self.HANDLERS[node.tag](self, node)
+			if node.tag.endswith("Error"):
+				self.HANDLERS['exception'](self, node)
+			else:
+				self.HANDLERS[node.tag](self, node)
 	
 	def handleIf(self, node):
 		elseblock = node.getchildren()[-1]
@@ -162,18 +167,143 @@ class CFG:
 		for child in node.getchildren():
 			self.handleNode(child)
 	
+	def handleTryFinally(self, node):
+		tryexcept, finallyBlock = node.getchildren()
+		self.handleNode(tryexcept)
+		for child in finallyBlock.getchildren():
+			self.handleNode(child)
+		self.connectTryFinally(tryexcept, finallyBlock.getchildren()[0])
+		self.getLastTryFinallyLines(node)
+	
+	def handleTryExcept(self, node):
+#		print 'handling tryexcept on line', getLine(node) ##
+		elseblock = node.getchildren()[-1]
+		handleElse = False
+		if elseblock.tag == 'else':
+			handleElse = True
+			node.remove(elseblock)
+		
+		for child in itertools.takewhile(lambda n: not n.tag.endswith("Error"), node.getchildren()): # all nodes in the the try body
+			self.handleNode(child)
+			for sibling in itertools.dropwhile(lambda n: not n.tag.endswith("Error"), node.getchildren()): # all the exceptions and possible else
+				if sibling.tag != 'else':
+					self.edges[getLine(child)].add(getLine(sibling))
+				else:
+					self.edges[getLine(child)].add(getLine(sibling.getchildren()[0]))
+			if handleElse:
+				self.edges[getLine(child)].add(getLine(elseblock.getchildren()[0]))	
+		
+		oldEdges = clone(self.edges)
+		for child in itertools.takewhile(lambda n: not n.tag.endswith("Error"), node.getchildren()): # all nodes in the the try body
+			self.handleNode(child)
+		
+		oldLast = clone(self.last)
+		self.last = set()
+		for child in (_child for _child in node.getchildren() if _child.tag.endswith("Error")): # all exception blocks
+			self.handleNode(child)
+			self.last = set()
+		self.last = oldLast
+		del oldLast
+		
+		for k in self.edges:
+			if oldEdges[k] - self.edges[k]:
+				for sibling in itertools.dropwhile(lambda n: not n.tag.endswith("Error"), node.getchildren()): # all the exceptions and possible else
+					if sibling.tag != 'else':
+						self.edges[k].add(getLine(sibling))
+					else:
+						self.edges[k].add(getLine(sibling.getchildren()[0]))
+		del oldEdges
+		
+			
+		node.append(elseblock)
+		self.getLastTryExceptLines(node)
+	
+	def handleExcept(self, node):
+		for child in node.getchildren():
+			self.handleNode(child)
+		
+	def connectTryFinally(self, node, terminal):
+		""" Connect the appropriate child nodes in `node` to the terminal """
+		
+		if len(node.getchildren()) != 0:
+			if node.tag not in 'if tryexcept tryfinally'.split():
+				for child in (c for c in node.getchildren() if c.tag.endswith("Error") or c.tag=='else'):
+					self.connectTryFinally(child.getchildren()[-1], terminal)
+			else:
+				elseblock = node.getchildren()[-1]
+				handleElse = False
+				if elseblock.tag == 'else' and elseblock.text != '-':
+					handleElse = True
+					node.remove(elseblock)
+				
+				if not handleElse:
+					last = list(itertools.takewhile(lambda n: not n.tag.endswith("Error"), node.getchildren()))[-1] # all nodes in the the try body
+					self.connectTryFinally(last, terminal)
+						
+					for child in itertools.dropwhile(lambda n: not n.tag.endswith("Error"), node.getchildren()): # all exceptions
+						self.connectTryFinally(child.getchildren()[-1], terminal)
+				else:
+#					connectTryFinally(elseblock.getchildren()[-1], terminal)
+					node.append(elseblock)
+					
+		else:
+			self.edges[getLine(node)].add(getLine(terminal))
+	
+	def getLastTryExceptLines(self, node):
+		
+		if len(node.getchildren()) == 0 or all(n.tag in self.BLACKLIST for n in node.getchildren()):
+			self.last.add(getLine(node))
+		else:
+			last = list(itertools.takewhile(lambda n: not n.tag.endswith("Error"), node.getchildren()))[-1]
+			for i in range(getLine(node), getLine(last)+1):
+				if i in self.last:
+					self.last.remove(i)
+			
+			handleElse = False
+			if node.getchildren()[-1].tag == 'else' and node.getchildren()[-1].text != '-':
+				handleElse = True
+			
+			for child in itertools.dropwhile(lambda n: not n.tag.endswith("Error"), node.getchildren()):
+				self.getLastTryExceptLines(child.getchildren()[-1])
+	
+	def getLastTryFinallyLines(self, node):
+#		print getLine(node) ##
+		if len(node.getchildren()) == 0 or all(n.tag in self.BLACKLIST for n in node.getchildren()):
+#			print 'adding last TF line', getLine(node) ##
+			self.last.add(getLine(node))
+		else:
+			last = node.getchildren()[-1]
+			for i in range(getLine(node), getLine(last)+1):
+				if i in self.last:
+					self.last.remove(i)
+			
+			self.getLastTryFinallyLines(last)
+	
+	def handleExpr(self, node):
+		for child in node.getchildren():
+			self.handleNode(child)
+	
+	def handleCall(self, node):
+		for child in node.getchildren():
+			self.handleNode(child)
+			
+	
 	HANDLERS = {
 				'augassign': handleAugAssign,
 				'binop': handleBinOp,
 				'break': handleBreak,
+				'call': handleCall,
 				'compare': handleCompare,
 #				'else': handleElse,
-#				'expr': handleExpr,
+				'exception': handleExcept,
+				'expr': handleExpr,
 				'for': handleLoop,
 				'functiondef': handleFunctionDef,
 				'if': handleIf,
 				'module': handleModule,
 				'print': handlePrint,
+				'tryfinally': handleTryFinally,
+				'tryexcept': handleTryExcept,
 #				'return': handleReturn,
 				}
 
@@ -191,21 +321,31 @@ if __name__ == "__main__":
 	print 'starting'
 	
 	expected = defaultdict(set)
-	expected[0] = set([32])
-	expected[32] = set([33])
-	expected[33] = set([34])
-	expected[34] = set([35, 42])
-	expected[35] = set([36])
-	expected[36] = set([37, 40])
-	expected[37] = set([38])
-	expected[38] = set([43])
-	expected[40] = set([34])
-	expected[42] = set([43])
-	expected[43] = set([])
+#	expected[0] = set([32])
+#	expected[32] = set([33])
+#	expected[33] = set([34])
+#	expected[34] = set([35, 42])
+#	expected[35] = set([36])
+#	expected[36] = set([37, 40])
+#	expected[37] = set([38])
+#	expected[38] = set([43])
+#	expected[40] = set([34])
+#	expected[42] = set([43])
+#	expected[43] = set([])
+	expected[0] = set([16])
+	expected[16] = set([20])
+	expected[20] = set([21])
+	expected[21] = set([22])
+	expected[22] = set([23, 26])
+	expected[23] = set([24])
+	expected[24] = set([28])
+	expected[26] = set([28])
+	expected[28] = set([29])
+	expected[29] = set([])
 	
 	xml = 'output.xml'
 	cfg = CFG(xml)
 	cfg.parse()
-	for k in sorted(cfg.edges): print k, sorted(cfg.edges[k]), '\t', cfg.edges[k] == expected[k], '\t', sorted(expected[k]) if cfg.edges[k] != expected[k] else ""
+	for k in sorted(expected): print k, sorted(cfg.edges[k]), '\t', cfg.edges[k] == expected[k], '\t', sorted(expected[k]) if cfg.edges[k] != expected[k] else ""
 	
 	print 'done'

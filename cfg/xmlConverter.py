@@ -532,7 +532,7 @@ class xmlConverter(object):
         child.appendChild(self.doc.createTextNode(str(astnode.lineno)))
         root.appendChild(child)
         for node in astnode.finalbody:
-            if not self.HANDLERS[node.__class__](self, doc, child, node):
+            if not self.handleNode(doc, child, node):
                 child.childNodes.pop(-1)
         
         return 1
