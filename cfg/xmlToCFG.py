@@ -3,6 +3,7 @@ import itertools
 
 from collections import defaultdict
 from copy import deepcopy as clone
+from Tkconstants import LAST
 
 class CFG:
 	
@@ -10,7 +11,9 @@ class CFG:
 						add
 						eq
 						geq
+						gt
 						gte
+						lt
 						leq
 						lte
 						mod
@@ -277,7 +280,21 @@ class CFG:
 				if i in self.last:
 					self.last.remove(i)
 			
-			self.getLastTryFinallyLines(last)
+			if last.tag in 'if tryfinally tryexcept'.split():
+				if last.tag == 'if':
+					elseblock = last.getchildren()[-1]
+					last.remove(elseblock)
+					if elseblock.text != '-':
+						self.getLastTryFinallyLines(elseblock)
+					self.getLastTryFinallyLines(last.getchildren()[-1])
+				
+				elif last.tag == 'tryfinally':
+					self.getLastTryFinallyLines(last)
+				
+				else: # last.tag == 'tryexcept'
+					self.getLastTryExceptLines(last)
+			else:
+				self.getLastTryFinallyLines(last)
 	
 	def handleExpr(self, node):
 		for child in node.getchildren():
@@ -346,6 +363,6 @@ if __name__ == "__main__":
 	xml = 'output.xml'
 	cfg = CFG(xml)
 	cfg.parse()
-	for k in sorted(expected): print k, sorted(cfg.edges[k]), '\t', cfg.edges[k] == expected[k], '\t', sorted(expected[k]) if cfg.edges[k] != expected[k] else ""
+	for k in sorted(cfg.edges): print k, sorted(cfg.edges[k]), '\t', cfg.edges[k] == expected[k], '\t', sorted(expected[k]) if cfg.edges[k] != expected[k] else ""
 	
 	print 'done'
