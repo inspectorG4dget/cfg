@@ -174,8 +174,6 @@ class CFG:
 		return 1
 	
 	def handlePrint(self, node):
-		if getLine(node) == 54:
-			print 'hi'
 		for child in node.getchildren():
 			self.handleNode(child)
 	
