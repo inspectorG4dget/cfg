@@ -87,7 +87,7 @@ class CFG:
 			for child in elseblock.getchildren():
 				self.handleNode(child)
 			self.scopes.append((getLine(node), getLastLine(node)))
-			self.scopes.append((getLine(elseblock), getLastLine(elseblock)))
+			self.scopes.append((getLine(elseblock.getchildren()[0]), getLastLine(elseblock)))
 			node.append(elseblock)
 	
 	def handleLoop(self, node):
@@ -115,7 +115,8 @@ class CFG:
 		self.handleLoopback(node)
 		self.scopes.append((getLine(node), getLastLine(node)))
 		if handleElse:
-			self.scopes.append((getLine(elseblock), getLastLine(elseblock)))
+			self.last.add(getLastLine(elseblock))
+			self.scopes.append((getLine(elseblock.getchildren()[0]), getLastLine(elseblock)))
 		node.append(elseblock)
 	
 	def handleLoopback(self, node, last=None):
@@ -164,6 +165,8 @@ class CFG:
 			self.edges[getLine(node)].add(getLine(getTop(ancestor.getnext())))	
 	
 	def handleFunctionDef(self, node):
+		self.scopes.append((getLine(node), getLastLine(node)))
+		
 		for child in node.getchildren():
 			self.handleNode(child)
 	
@@ -171,6 +174,8 @@ class CFG:
 		return 1
 	
 	def handlePrint(self, node):
+		if getLine(node) == 54:
+			print 'hi'
 		for child in node.getchildren():
 			self.handleNode(child)
 	
