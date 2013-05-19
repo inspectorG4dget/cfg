@@ -1,56 +1,89 @@
 <?xml version="1.0" ?>
 <module>
     0
+    <importfrom>
+        5
+        from utils import * as *
+    </importfrom>
     <functiondef>
-        71
-        <name>71</name>
-        <if>
-            72
-            <compare>
-                72
-                <binop>
-                    72
-                    <name>72</name>
-                    <mod>mod</mod>
-                    <num>72</num>
-                </binop>
-                <eq>eq</eq>
-                <num>72</num>
-            </compare>
-            <print>
-                73
-                <name>73</name>
-                <str>73</str>
-            </print>
-            <else>
-                73
+        24
+        <expr>
+            26
+            <call>
+                26
+                <str>26</str>
                 <if>
-                    74
+                    12
+                    <call>12</call>
+                    <return>13</return>
+                </if>
+                <assign>15</assign>
+                <return>16</return>
+            </call>
+        </expr>
+        <print>
+            29
+            <str>29</str>
+        </print>
+        <tryfinally>
+            30
+            <tryexcept>
+                30
+                <expr>
+                    31
+                    <binop>
+                        31
+                        <num>31</num>
+                        <add>add</add>
+                        <num>31</num>
+                    </binop>
+                </expr>
+                <AttributeError>
+                    32
+                    <print>
+                        33
+                        <str>33</str>
+                    </print>
+                </AttributeError>
+                <else>
+                    35
+                    <print>
+                        35
+                        <str>35</str>
+                    </print>
+                </else>
+            </tryexcept>
+            <finally>
+                36
+                <if>
+                    37
                     <compare>
-                        74
-                        <binop>
-                            74
-                            <name>74</name>
-                            <mod>mod</mod>
-                            <num>74</num>
-                        </binop>
-                        <eq>eq</eq>
-                        <num>74</num>
+                        37
+                        <num>37</num>
+                        <gt>gt</gt>
+                        <num>37</num>
                     </compare>
                     <print>
-                        75
-                        <name>75</name>
-                        <str>75</str>
+                        38
+                        <str>38</str>
+                    </print>
+                    <print>
+                        39
+                        <str>39</str>
                     </print>
                     <else>
-                        76
+                        40
                         <print>
-                            77
-                            <str>77</str>
+                            41
+                            <str>41</str>
                         </print>
                     </else>
                 </if>
-            </else>
-        </if>
+            </finally>
+        </tryfinally>
+        <print>
+            42
+            <str>42</str>
+        </print>
     </functiondef>
 </module>

@@ -2,7 +2,7 @@
 #import utils
 #from utils import nodeType as nt
 #from utils import nodeType
-#from utils import *
+from utils import *
 
 #def bar():
 #	print 'hi'
@@ -21,24 +21,25 @@
 #		print 'hi'
 #	print 'ending'
 
-#def bar():
-##	nt('')
-##	nodeType('')
-##	utils.nodeType('')
-#	print 'hi'
-#	try:
-#		1+1
-#	except AttributeError:
-#		print 'oops'
-#	else:
-#		print 'woo hoo'
-#	finally:
-#		if 3>4:
-#			print 'phew'
-#			print 'uhh'
-#		else:
-#			print 'ahh'
-#	print 'done'
+def bar():
+#	nt('')
+	nodeType('')
+#	utils.nodeType('')
+#	ut.nodeType('')
+	print 'hi'
+	try:
+		1+1
+	except AttributeError:
+		print 'oops'
+	else:
+		print 'woo hoo'
+	finally:
+		if 3>4:
+			print 'phew'
+			print 'uhh'
+		else:
+			print 'ahh'
+	print 'done'
 #	bar()
 #bar()
 
