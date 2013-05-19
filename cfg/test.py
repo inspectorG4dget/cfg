@@ -13,20 +13,32 @@
 #	3+4
 #	return 5
 
-def bar():
-#	nt('')
-#	nodeType('')
-#	utils.nodeType('')
-	print 'hi'
-	try:
-		1+1
-	except AttributeError:
-		print 'oops'
-	else:
-		print 'woo hoo'
-	finally:
-		print 'phew'
-	print 'done'
+#def bar():
+#	print 'entring'
+#	for i in L:
+#		print i
+#	else:
+#		print 'hi'
+#	print 'ending'
+
+#def bar():
+##	nt('')
+##	nodeType('')
+##	utils.nodeType('')
+#	print 'hi'
+#	try:
+#		1+1
+#	except AttributeError:
+#		print 'oops'
+#	else:
+#		print 'woo hoo'
+#	finally:
+#		if 3>4:
+#			print 'phew'
+#			print 'uhh'
+#		else:
+#			print 'ahh'
+#	print 'done'
 #	bar()
 #bar()
 

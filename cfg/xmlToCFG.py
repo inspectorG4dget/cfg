@@ -356,7 +356,7 @@ def getLine(node):
 	return int(node.text.strip().partition('\n')[0])
 
 def getLastLine(node):
-	print getLine(node) ##
+#	print getLine(node) ##
 	if all(child.tag in CFG.BLACKLIST for child in node.getchildren()):
 		return getLine(node)
 	else:
@@ -370,36 +370,3 @@ def getTop(node):
 		return node
 	else:
 		return node.getchildren()[0].getchildren()[0].getchildren[0]
-	
-if __name__ == "__main__":
-	print 'starting'
-	
-	expected = defaultdict(set)
-#	expected[0] = set([32])
-#	expected[32] = set([33])
-#	expected[33] = set([34])
-#	expected[34] = set([35, 42])
-#	expected[35] = set([36])
-#	expected[36] = set([37, 40])
-#	expected[37] = set([38])
-#	expected[38] = set([43])
-#	expected[40] = set([34])
-#	expected[42] = set([43])
-#	expected[43] = set([])
-	expected[0] = set([16])
-	expected[16] = set([20])
-	expected[20] = set([21])
-	expected[21] = set([22])
-	expected[22] = set([23, 26])
-	expected[23] = set([24])
-	expected[24] = set([28])
-	expected[26] = set([28])
-	expected[28] = set([29])
-	expected[29] = set([])
-	
-	xml = 'output.xml'
-	cfg = CFG(xml)
-	cfg.parse()
-	for k in sorted(cfg.edges): print k, sorted(cfg.edges[k]), '\t', cfg.edges[k] == expected[k], '\t', sorted(expected[k]) if cfg.edges[k] != expected[k] else ""
-	print sorted(cfg.scopes)
-	print 'done'
