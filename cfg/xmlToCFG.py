@@ -3,7 +3,6 @@ import itertools
 
 from collections import defaultdict
 from copy import deepcopy as clone
-from Tkconstants import LAST
 
 class CFG:
 	
@@ -30,6 +29,8 @@ class CFG:
 		self.nodes = set()
 		self.edges = defaultdict(set)
 		self.last = set([getLine(self.xml)])
+		self.scopes = []
+		self.currScope = []
 		
 	def parse(self):
 		for child in self.xml.getchildren():
@@ -85,23 +86,37 @@ class CFG:
 		if handleElse:
 			for child in elseblock.getchildren():
 				self.handleNode(child)
+			self.scopes.append((getLine(node), getLastLine(node)))
+			self.scopes.append((getLine(elseblock), getLastLine(elseblock)))
 			node.append(elseblock)
 	
 	def handleLoop(self, node):
+		
 		elseblock = node.getchildren()[-1]
 		node.remove(elseblock)
 		handleElse = False
 		if elseblock.text != '-':
 			handleElse = True
+		oldLast = clone(self.last)
+		if handleElse:
+			self.edges[getLine(node)].add(getLine(elseblock.getchildren()[0]))
+			for child in elseblock.getchildren():
+				self.handleNode(child)
+		self.last = oldLast
+		del oldLast
+		
 		for child in node.getchildren():
 			self.handleNode(child)
 		
-		if handleElse:
+		if not handleElse:
 			if node.getnext() is not None:
-				self.edges[getLine(node)].add(getLine(elseblock.getchildren()[0]))	
-			for child in elseblock.getchildren():
-				self.handleNode(child)
+				self.edges[getLine(node)].add(getLine(node.getnext()))
 		
+		self.handleLoopback(node)
+		self.scopes.append((getLine(node), getLastLine(node)))
+		if handleElse:
+			self.scopes.append((getLine(elseblock), getLastLine(elseblock)))
+		node.append(elseblock)
 	
 	def handleLoopback(self, node, last=None):
 		""" Handle the loopback of final nodes to the looping node
@@ -135,6 +150,7 @@ class CFG:
 			
 			if handleElse:
 				self.handleLoopback(node, elseblock.getchildren()[-1])
+				node.append(elseblock)
 		
 		else: # handling a try-finally block. Leaving this as TODO for later
 			pass
@@ -172,7 +188,11 @@ class CFG:
 	
 	def handleTryFinally(self, node):
 		tryexcept, finallyBlock = node.getchildren()
+		self.scopes.append((getLine(finallyBlock.getchildren()[0]), getLastLine(finallyBlock)))
+		self.scopes.append((getLine(tryexcept), getLastLine(tryexcept)))
+		
 		self.handleNode(tryexcept)
+		self.last.add(getLine(finallyBlock))
 		for child in finallyBlock.getchildren():
 			self.handleNode(child)
 		self.connectTryFinally(tryexcept, finallyBlock.getchildren()[0])
@@ -184,11 +204,14 @@ class CFG:
 		handleElse = False
 		if elseblock.tag == 'else':
 			handleElse = True
+			self.scopes.append((getLine(elseblock)-1, getLastLine(elseblock)))
 			node.remove(elseblock)
 		
-		for child in itertools.takewhile(lambda n: not n.tag.endswith("Error"), node.getchildren()): # all nodes in the the try body
+		tryblock = list(itertools.takewhile(lambda n: not n.tag.endswith("Error"), node.getchildren())) # all nodes in the the try body
+		for child in tryblock:
 			self.handleNode(child)
 			for sibling in itertools.dropwhile(lambda n: not n.tag.endswith("Error"), node.getchildren()): # all the exceptions and possible else
+				self.scopes.append((getLine(sibling), getLastLine(sibling)))
 				if sibling.tag != 'else':
 					self.edges[getLine(child)].add(getLine(sibling))
 				else:
@@ -220,6 +243,7 @@ class CFG:
 			
 		node.append(elseblock)
 		self.getLastTryExceptLines(node)
+		self.scopes.append((getLine(node), getLastLine(list(itertools.takewhile(lambda n: not n.tag.endswith("Error"), tryblock))[-1])))
 	
 	def handleExcept(self, node):
 		for child in node.getchildren():
@@ -328,6 +352,16 @@ class CFG:
 def getLine(node):
 	return int(node.text.strip().partition('\n')[0])
 
+def getLastLine(node):
+	print getLine(node) ##
+	if all(child.tag in CFG.BLACKLIST for child in node.getchildren()):
+		return getLine(node)
+	else:
+		answer = None
+		for child in (child for child in node.getchildren() if child.tag not in CFG.BLACKLIST):
+			answer = max(getLastLine(child), answer)
+		return answer
+
 def getTop(node):
 	if node.tag != 'tryfinally':
 		return node
@@ -364,5 +398,5 @@ if __name__ == "__main__":
 	cfg = CFG(xml)
 	cfg.parse()
 	for k in sorted(cfg.edges): print k, sorted(cfg.edges[k]), '\t', cfg.edges[k] == expected[k], '\t', sorted(expected[k]) if cfg.edges[k] != expected[k] else ""
-	
+	print sorted(cfg.scopes)
 	print 'done'

@@ -529,7 +529,7 @@ class xmlConverter(object):
         
         childName = "finally"
         child = doc.createElement(childName)
-        child.appendChild(self.doc.createTextNode(str(astnode.lineno)))
+        child.appendChild(self.doc.createTextNode(str(astnode.finalbody[0].lineno-1)))
         root.appendChild(child)
         for node in astnode.finalbody:
             if not self.handleNode(doc, child, node):
