@@ -3,6 +3,7 @@ import itertools
 
 from collections import defaultdict
 from copy import deepcopy as clone
+from compiler.ast import flatten as flattenList
 
 class CFG:
 	
@@ -64,10 +65,19 @@ class CFG:
 			else:
 				self.HANDLERS[node.tag](self, node)
 	
+	def handleImportFrom(self, node):
+		return 1
+	
+	def handleImport(self, node):
+		return 1
+	
+	def handleReturn(self, node):
+		return 1
+	
 	def handleIf(self, node):
 		elseblock = node.getchildren()[-1]
 		handleElse = False
-		if elseblock.text != '-':
+		if elseblock.tag=='else' and elseblock.text != '-':
 			self.edges[getLine(node)].add(getLine(elseblock.getchildren()[0]))
 			node.remove(elseblock)
 			handleElse = True
@@ -330,7 +340,9 @@ class CFG:
 	def handleCall(self, node):
 		for child in node.getchildren():
 			self.handleNode(child)
-			
+		
+		self.last = set(getCallLast(node))
+		self.last.update([getLastLine(node)])
 	
 	HANDLERS = {
 				'augassign': handleAugAssign,
@@ -344,8 +356,11 @@ class CFG:
 				'for': handleLoop,
 				'functiondef': handleFunctionDef,
 				'if': handleIf,
+				'import': handleImport,
+				'importfrom': handleImportFrom,
 				'module': handleModule,
 				'print': handlePrint,
+				'return': handleReturn,
 				'tryfinally': handleTryFinally,
 				'tryexcept': handleTryExcept,
 #				'return': handleReturn,
@@ -364,6 +379,11 @@ def getLastLine(node):
 		for child in (child for child in node.getchildren() if child.tag not in CFG.BLACKLIST):
 			answer = max(getLastLine(child), answer)
 		return answer
+
+def getCallLast(node):
+	if node.tag == 'return':
+		return getLine(node)
+	return flattenList([getCallLast(child) for child in node.getchildren()])
 
 def getTop(node):
 	if node.tag != 'tryfinally':

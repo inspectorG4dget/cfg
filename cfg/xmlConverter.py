@@ -14,6 +14,7 @@ class xmlConverter(object):
     BUILTINFUNCS = set( # a set of python's builtin functions, that are not imported imported or defined
 				i.strip() for i in """
 					hasattr
+					lower
 				""".split())
     BUILTINMODS = set( # a set of python's builtin modules, that are not imported imported or defined
 					i.strip() for i in """
@@ -670,7 +671,11 @@ class xmlConverter(object):
                 
         if popcall:
             self.callstack.pop(-1)
-                
+        
+    def handleAssign(self, doc, root, astnode):
+		if not self.handleNode(doc, root, astnode.value):
+			root.childNodes.pop(-1)
+            
     def handleAugAssign(self, doc, root, astnode):
         
         if not self.handleNode(doc, root, astnode.target):
@@ -722,11 +727,15 @@ class xmlConverter(object):
             root.childNodes.pop(-1)
     
     def handleCall(self, doc, root, astnode):
-    	try:
+        try:
             if astnode.func.id in self.BUILTINFUNCS:
                	return 1
         except AttributeError:
-        	pass
+            try:
+                if astnode.func.attr in self.BUILTINFUNCS:
+                   	return 1
+            except AttributeError:
+            	pass
         if isinstance(astnode.func, _ast.Attribute):	# this is an imported function
             self.handleAttribute(doc, root, astnode.func)
         else:
@@ -1166,7 +1175,7 @@ class xmlConverter(object):
         _ast.And			: handleAtomic,
         _ast.Assert			: handleAssert,
         _ast.Attribute		: handleAttribute,
-        _ast.Assign			: handleAtomic,
+        _ast.Assign			: handleAssign,
         _ast.AugAssign		: handleAugAssign,
         _ast.BinOp			: handleBinOp,
         _ast.BitAnd			: handleAtomic,

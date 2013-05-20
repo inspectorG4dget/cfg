@@ -24,7 +24,6 @@ from utils import *
 def bar():
 #	nt('')
 	nodeType('')
-#	utils.nodeType('')
 #	ut.nodeType('')
 	print 'hi'
 	try:

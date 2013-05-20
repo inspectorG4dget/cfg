@@ -17,7 +17,6 @@
                     <call>12</call>
                     <return>13</return>
                 </if>
-                <assign>15</assign>
                 <return>16</return>
             </call>
         </expr>
