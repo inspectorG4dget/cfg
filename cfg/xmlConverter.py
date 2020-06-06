@@ -786,24 +786,21 @@ class xmlConverter(object):
                 root.appendChild(child)
 
                 return 1
-#				for node in self.FUNCTIONS["%s.%s" %(self.modname, astnode.func.id)].body:
-#					if not self.handleNode(doc, root, node):
-#						root.childNodes.pop(-1)
+
             else:
                 childName = "functioncall"
                 child = doc.createElement(childName)
                 if not isinstance(astnode, _ast.Module):
-                    label = str(self.FUNCTIONS["%s.%s" %(self.modname if self.modname else "module", astnode.func.id)].lineno)
+                    if astnode.func.id == 'print':
+                        label = str(astnode.lineno)
+                    else:
+                        label = str(self.FUNCTIONS["%s.%s" %(self.modname if self.modname else "module", astnode.func.id)].body[0].lineno)
                     child.appendChild(self.doc.createTextNode(label))
                 root.appendChild(child)
 
                 return 1
-#				root.appendChild(self.doc.createTextNode("loopback to %s" %astnode.func.id))
-
-            if popcall:
-                self.callstack.pop(-1)
-
         return 1
+
 
     def handleClassDef(self, doc, parent, astnode):
         pass
@@ -1141,19 +1138,39 @@ class xmlConverter(object):
 
         return 1
 
-    def handleTryFinally(self, doc, root, astnode):
+    def handleTry(self, doc, root, astnode):
 
         for node in astnode.body:
             if not self.handleNode(doc, root, node):
                 root.childNodes.pop(-1)
 
-        childName = "finally"
-        child = doc.createElement(childName)
-        child.appendChild(self.doc.createTextNode(str(astnode.finalbody[0].lineno-1)))
-        root.appendChild(child)
-        for node in astnode.finalbody:
-            if not self.handleNode(doc, child, node):
-                child.childNodes.pop(-1)
+        for handler in astnode.handlers:
+            childName = "except {}".format(handler.type.id)
+            child = doc.createElement(childName)
+            child.appendChild(self.doc.createTextNode(str(handler.lineno)))
+            root.appendChild(child)
+
+            for node in handler.body:
+                if not self.handleNode(doc, child, node):
+                    child.childNodes.pop(-1)
+
+        if astnode.orelse:
+            childName = 'exceptElse'
+            child = doc.createElement(childName)
+            child.appendChild(self.doc.createTextNode(str(astnode.finalbody[0].lineno)))
+            root.appendChild(child)
+            for node in astnode.orelse:
+                if not self.handleNode(doc, child, node):
+                    child.childNodes.pop(-1)
+
+        if astnode.finalbody:
+            childName = "finally"
+            child = doc.createElement(childName)
+            child.appendChild(self.doc.createTextNode(str(astnode.finalbody[0].lineno)))
+            root.appendChild(child)
+            for node in astnode.finalbody:
+                if not self.handleNode(doc, child, node):
+                    child.childNodes.pop(-1)
 
         return 1
 
@@ -1190,9 +1207,6 @@ class xmlConverter(object):
     def handlecomprehension(self, doc, parent, astnode):
         pass
 
-    def handleexcepthandler(self, doc, parent, astnode):
-        pass
-
     def handleexpr(self, doc, parent, astnode):
         pass
 
@@ -1219,7 +1233,7 @@ class xmlConverter(object):
 
     HANDLERS = {
         # _ast.AST: handleAst,
-        # _ast.Add: handleAdd,
+        _ast.Add: handleAtomic,
         # _ast.And: handleAnd,
         # _ast.AnnAssign: handleAnnassign,
         _ast.Assert: handleAssert,
@@ -1232,7 +1246,7 @@ class xmlConverter(object):
         # _ast.AugLoad: handleAugload,
         # _ast.AugStore: handleAugstore,
         # _ast.Await: handleAwait,
-        # _ast.BinOp: handleBinop,
+        _ast.BinOp: handleBinOp,
         # _ast.BitAnd: handleBitand,
         # _ast.BitOr: handleBitor,
         # _ast.BitXor: handleBitxor,
@@ -1249,7 +1263,7 @@ class xmlConverter(object):
         # _ast.DictComp: handleDictcomp,
         # _ast.Div: handleDiv,
         _ast.Eq: handleAtomic,
-        # _ast.ExceptHandler: handleExcepthandler,
+        _ast.ExceptHandler: handleExceptHandler,
         _ast.Expr: handleExpr,
         # _ast.Expression: handleExpression,
         # _ast.ExtSlice: handleExtslice,
@@ -1305,7 +1319,7 @@ class xmlConverter(object):
         _ast.Sub: handleSub,
         _ast.Subscript: handleSubscript,
         _ast.Suite: handleSuite,
-        # _ast.Try: handleTry,
+        _ast.Try: handleTry,
         _ast.Tuple: handleTuple,
         # _ast.TypeIgnore: handleTypeignore,
         # _ast.UAdd: handleUadd,
@@ -1320,7 +1334,6 @@ class xmlConverter(object):
         # _ast.arguments: handleArguments,
         # _ast.cmpop: handleCmpop,
         # _ast.comprehension: handleComprehension,
-        # _ast.excepthandler: handleExcepthandler,
         # _ast.keyword: handleKeyword,
         # _ast.Mod: handleMod,
         # _ast.operator: handleOperator,
