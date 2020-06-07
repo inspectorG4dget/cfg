@@ -734,12 +734,14 @@ class xmlConverter(object):
 
     def handleBoolOp(self, doc, root, astnode):
 
-        if not self.handleNode(doc, root, astnode.left):
-            root.childNodes.pop(-1)
+        for node in astnode.values:
+            if not self.handleNode(doc, root, node):
+                root.childNodes.pop(-1)
         if not self.handleNode(doc, root, astnode.op):
             root.childNodes.pop(-1)
-        if not self.handleNode(doc, root, astnode.right):
-            root.childNodes.pop(-1)
+
+        return 1
+
 
     def handleCall(self, doc, root, astnode):
         try:
@@ -857,6 +859,9 @@ class xmlConverter(object):
         pass
 
     def handleLoop(self, doc, root, astnode):
+
+        if hasattr(astnode, "iter"): self.handleNode(doc, root, astnode.iter)
+        if hasattr(astnode, 'target'): self.handleNode(doc, root, astnode.target)
 
         for node in astnode.body:
             if not self.handleNode(doc, root, node):
@@ -1216,7 +1221,7 @@ class xmlConverter(object):
     def handlekeyword(self, doc, parent, astnode):
         pass
 
-    def handlemod(self, doc, parent, astnode):
+    def handleMod(self, doc, parent, astnode):
         pass
 
     def handleoperator(self, doc, parent, astnode):
@@ -1234,7 +1239,7 @@ class xmlConverter(object):
     HANDLERS = {
         # _ast.AST: handleAst,
         _ast.Add: handleAtomic,
-        # _ast.And: handleAnd,
+        _ast.And: handleAtomic,
         # _ast.AnnAssign: handleAnnassign,
         _ast.Assert: handleAssert,
         _ast.Assign: handleAssign,
@@ -1242,16 +1247,16 @@ class xmlConverter(object):
         # _ast.AsyncFunctionDef: handleAsyncfunctiondef,
         # _ast.AsyncWith: handleAsyncwith,
         _ast.Attribute: handleAttribute,
-        # _ast.AugAssign: handleAugassign,
+        _ast.AugAssign: handleAugAssign,
         # _ast.AugLoad: handleAugload,
         # _ast.AugStore: handleAugstore,
         # _ast.Await: handleAwait,
         _ast.BinOp: handleBinOp,
-        # _ast.BitAnd: handleBitand,
-        # _ast.BitOr: handleBitor,
-        # _ast.BitXor: handleBitxor,
-        # _ast.BoolOp: handleBoolop,
-        # _ast.Break: handleBreak,
+        _ast.BitAnd: handleBitAnd,
+        _ast.BitOr: handleBitOr,
+        _ast.BitXor: handleBitXor,
+        _ast.BoolOp: handleBoolOp,
+        _ast.Break: handleAtomic,
         _ast.Call: handleCall,
         # _ast.ClassDef: handleClassdef,
         _ast.Compare: handleCompare,
@@ -1261,21 +1266,21 @@ class xmlConverter(object):
         _ast.Delete: handleDelete,
         _ast.Dict: handleDict,
         # _ast.DictComp: handleDictcomp,
-        # _ast.Div: handleDiv,
+        _ast.Div: handleAtomic,
         _ast.Eq: handleAtomic,
         _ast.ExceptHandler: handleExceptHandler,
         _ast.Expr: handleExpr,
         # _ast.Expression: handleExpression,
         # _ast.ExtSlice: handleExtslice,
-        # _ast.FloorDiv: handleFloordiv,
-        # _ast.For: handleFor,
+        _ast.FloorDiv: handleAtomic,
+        _ast.For: handleLoop,
         # _ast.FormattedValue: handleFormattedvalue,
         _ast.FunctionDef: handleFunctionDef,
         # _ast.FunctionType: handleFunctiontype,
         # _ast.GeneratorExp: handleGeneratorexp,
         _ast.Global: handleGlobal,
-        # _ast.Gt: handleGt,
-        # _ast.GtE: handleGte,
+        _ast.Gt: handleAtomic,
+        _ast.GtE: handleAtomic,
         _ast.If: handleIf,
         # _ast.IfExp: handleIfexp,
         _ast.Import: handleImport,
@@ -1284,18 +1289,18 @@ class xmlConverter(object):
         _ast.Index: handleIndex,
         _ast.Interactive: handleInteractive,
         _ast.Invert: handleInvert,
-        # _ast.Is: handleIs,
+        _ast.Is: handleAtomic,
         # _ast.IsNot: handleIsnot,
         # _ast.JoinedStr: handleJoinedstr,
-        # _ast.LShift: handleLshift,
+        _ast.LShift: handleAtomic,
         _ast.Lambda: handleLambda,
         _ast.List: handleList,
         # _ast.ListComp: handleListcomp,
         _ast.Load: handleLoad,
-        # _ast.Lt: handleLt,
-        # _ast.LtE: handleLte,
+        _ast.Lt: handleAtomic,
+        _ast.LtE: handleAtomic,
         # _ast.MatMult: handleMatmult,
-        # _ast.mod: handleMod,
+        _ast.Mod: handleAtomic,
         _ast.Module: handleModule,
         # _ast.Mult: handleMult,
         _ast.Name: handleName,
@@ -1306,8 +1311,8 @@ class xmlConverter(object):
         # _ast.NotIn: handleNotin,
         # _ast.Or: handleOr,
         _ast.Param: handleParam,
-        # _ast.Pass: handlePass,
-        # _ast.Pow: handlePow,
+        _ast.Pass: handleAtomic,
+        _ast.Pow: handleAtomic,
         # _ast.RShift: handleRshift,
         # _ast.Raise: handleRaise,
         _ast.Return: handleReturn,
@@ -1335,7 +1340,6 @@ class xmlConverter(object):
         # _ast.cmpop: handleCmpop,
         # _ast.comprehension: handleComprehension,
         # _ast.keyword: handleKeyword,
-        # _ast.Mod: handleMod,
         # _ast.operator: handleOperator,
         _ast.Slice: handleSlice,
         # _ast.stmt: handleStmt,
