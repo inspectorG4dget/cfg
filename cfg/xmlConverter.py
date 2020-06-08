@@ -367,6 +367,7 @@ class xmlConverter(object):
         return 1
 
 
+
     def handleGlobal(self, doc, parent, astnode):
         pass
 
@@ -774,6 +775,8 @@ class xmlConverter(object):
         _ast.RShift: handleAtomic,
         _ast.Raise: handleRaise,
         _ast.Return: handleReturn,
+        _ast.Yield: handleReturn,
+        _ast.YieldFrom: handleReturn,
         _ast.Set: handleList,
         _ast.SetComp: handleListComp,
         _ast.slice: handleSlice,
@@ -789,8 +792,6 @@ class xmlConverter(object):
         _ast.USub: handleAtomic,
         _ast.While: handleLoop,
         # _ast.With: handleWith,
-        _ast.Yield: handleReturn,
-        # _ast.YieldFrom: handleYieldfrom,
         # _ast.alias: handleAlias,
         # _ast.arg: handleArg,
         # _ast.arguments: handleArguments,
