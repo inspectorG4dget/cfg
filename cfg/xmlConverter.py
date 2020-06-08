@@ -131,9 +131,11 @@ class xmlConverter(object):
         if popcall:
             self.callstack.pop(-1)
 
+
     def handleAssign(self, doc, root, astnode):
         if not self.handleNode(doc, root, astnode.value):
             root.childNodes.pop(-1)
+
 
     def handleAugAssign(self, doc, root, astnode):
 
@@ -238,6 +240,7 @@ class xmlConverter(object):
     def handleClassDef(self, doc, parent, astnode):
         pass
 
+
     def handleCompare(self, doc, root, astnode):
 
         for node in itertools.chain([astnode.left] if hasattr(astnode, 'left') else [],
@@ -256,7 +259,13 @@ class xmlConverter(object):
         pass
 
     def handleDict(self, doc, parent, astnode):
-        pass
+        for k,v in zip(astnode.keys, astnode.values):
+            if not self.handleNode(doc, parent, k):
+                parent.childNodes.pop(-1)
+            if not self.handleNode(doc, parent, v):
+                parent.childNodes.pop(-1)
+
+        return 1
 
     def handleDictComp(self, doc, parent, astnode):
         for node in astnode.generators:
@@ -526,9 +535,6 @@ class xmlConverter(object):
 
         return 1
 
-    def handleSet(self, doc, parent, astnode):
-        pass
-
 
     def handleSlice(self, doc, root, astnode):
         if not self.handleNode(doc, root, astnode.lower):
@@ -540,8 +546,6 @@ class xmlConverter(object):
 
         return 1
 
-    def handleSub(self, doc, parent, astnode):
-        pass
 
     def handleSubscript(self, doc, root, astnode):
 
@@ -635,8 +639,6 @@ class xmlConverter(object):
     def handlearguments(self, doc, parent, astnode):
         pass
 
-    def handleboolop(self, doc, parent, astnode):
-        pass
 
     def handlecmpop(self, doc, parent, astnode):
         pass
@@ -694,7 +696,7 @@ class xmlConverter(object):
         _ast.Continue: handleAtomic,
         _ast.Del: handleAtomic,
         # _ast.Delete: handleDelete,
-        # _ast.Dict: handleDict,
+        _ast.Dict: handleDict,
         _ast.DictComp: handleDictComp,
         _ast.Div: handleAtomic,
         _ast.Eq: handleAtomic,
@@ -746,7 +748,7 @@ class xmlConverter(object):
         _ast.RShift: handleAtomic,
         # _ast.Raise: handleRaise,
         _ast.Return: handleReturn,
-        # _ast.Set: handleSet,
+        _ast.Set: handleList,
         _ast.SetComp: handleListComp,
         _ast.slice: handleSlice,
         # _ast.Starred: handleStarred,
