@@ -755,7 +755,7 @@ class xmlConverter(object):
         # _ast.MatMult: handleMatmult,
         _ast.Mod: handleAtomic,
         _ast.Module: handleModule,
-        # _ast.Mult: handleMult,
+        _ast.Mult: handleAtomic,
         _ast.Name: handleAtomic,
         # _ast.NamedExpr: handleNamedexpr,
         # _ast.Nonlocal: handleNonlocal,
