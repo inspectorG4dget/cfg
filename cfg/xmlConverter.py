@@ -671,7 +671,22 @@ class xmlConverter(object):
 
 
     def handleWith(self, doc, parent, astnode):
-        pass
+        for node in itertools.chain(astnode.items, astnode.body):
+            if not self.handleNode(doc, parent, node):
+                parent.childNodes.pop(-1)
+
+        return 1
+
+
+    def handleWithItem(self, doc, parent, astnode):
+
+        if not self.handleNode(doc, parent, astnode.context_expr):
+            parent.childNodes.pop(-1)
+
+        if not self.handleNode(doc, parent, astnode.optional_vars):
+            parent.childNodes.pop(-1)
+
+        return 1
 
     def handlealias(self, doc, parent, astnode):
         pass
@@ -819,7 +834,7 @@ class xmlConverter(object):
         # _ast.Suite: handleSuite,
         # _ast.Tuple: handleTuple,
         # _ast.TypeIgnore: handleTypeignore,
-        # _ast.With: handleWith,
+        _ast.With: handleWith,
         # _ast.alias: handleAlias,
         # _ast.arg: handleArg,
         # _ast.arguments: handleArguments,
@@ -828,7 +843,7 @@ class xmlConverter(object):
         # _ast.operator: handleOperator,
         # _ast.stmt: handleStmt,
         # _ast.type_ignore: handleType_Ignore,
-        # _ast.withitem: handleWithitem,
+        _ast.withitem: handleWithItem,
     }
 
 
