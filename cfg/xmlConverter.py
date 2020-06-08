@@ -256,7 +256,12 @@ class xmlConverter(object):
         return 1
 
     def handleDelete(self, doc, parent, astnode):
-        pass
+        for node in astnode.targets:
+            if not self.handleNode(doc, parent, node):
+                parent.childNodes.pop(-1)
+
+        return 1
+
 
     def handleDict(self, doc, parent, astnode):
         for k,v in zip(astnode.keys, astnode.values):
@@ -702,8 +707,8 @@ class xmlConverter(object):
         _ast.Compare: handleCompare,
         _ast.Constant: handleAtomic,
         _ast.Continue: handleAtomic,
-        _ast.Del: handleAtomic,
-        # _ast.Delete: handleDelete,
+        # _ast.Del: handleAtomic,
+        _ast.Delete: handleDelete,
         _ast.Dict: handleDict,
         _ast.DictComp: handleDictComp,
         _ast.Div: handleAtomic,
