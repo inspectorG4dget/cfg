@@ -239,7 +239,11 @@ class xmlConverter(object):
 
 
     def handleClassDef(self, doc, parent, astnode):
-        pass
+        for node in astnode.body:
+            if not self.handleNode(doc, parent, node):
+                parent.childNodes.pop(-1)
+
+        return 1
 
 
     def handleCompare(self, doc, root, astnode):
@@ -786,7 +790,7 @@ class xmlConverter(object):
         _ast.YieldFrom: handleReturn,
         _ast.Call: handleCall,
 
-        # _ast.ClassDef: handleClassDef,
+        _ast.ClassDef: handleClassDef,
 
         _ast.Try: handleTry,
         _ast.ExceptHandler: handleExceptHandler,
