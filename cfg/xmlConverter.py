@@ -267,6 +267,7 @@ class xmlConverter(object):
 
         return 1
 
+
     def handleDictComp(self, doc, parent, astnode):
         for node in astnode.generators:
             if not self.handleNode(doc, parent, node):
@@ -279,6 +280,7 @@ class xmlConverter(object):
 
         return 1
 
+
     def handleEllipsis(self, doc, parent, astnode):
         pass
 
@@ -289,6 +291,7 @@ class xmlConverter(object):
                 root.childNodes.pop(-1)
         return 1
 
+
     def handleExec(self, doc, parent, astnode):
         pass
 
@@ -298,8 +301,10 @@ class xmlConverter(object):
 
         return 1
 
+
     def handleExtSlice(self, doc, parent, astnode):
         pass
+
 
     def handleLoop(self, doc, root, astnode):
 
@@ -461,8 +466,6 @@ class xmlConverter(object):
     def handleInteractive(self, doc, parent, astnode):
         pass
 
-    def handleInvert(self, doc, parent, astnode):
-        pass
 
     def handleIsNot(self, doc, parent, astnode):
         pass
@@ -537,11 +540,11 @@ class xmlConverter(object):
 
 
     def handleSlice(self, doc, root, astnode):
-        if not self.handleNode(doc, root, astnode.lower):
+        if astnode.lower is not None and not self.handleNode(doc, root, astnode.lower):
             root.childNodes.pop(-1)
-        if not self.handleNode(doc, root, astnode.step if astnode.step else _ast.Num(1)):
+        if astnode.lower is not None and not self.handleNode(doc, root, astnode.step if astnode.step else _ast.Num(1)):
             root.childNodes.pop(-1)
-        if not self.handleNode(doc, root, astnode.upper):
+        if astnode.lower is not None and not self.handleNode(doc, root, astnode.upper):
             root.childNodes.pop(-1)
 
         return 1
@@ -556,8 +559,10 @@ class xmlConverter(object):
 
         return 1
 
+
     def handleSuite(self, doc, parent, astnode):
         pass
+
 
     def handleTryExcept(self, doc, root, astnode):
 
@@ -720,13 +725,13 @@ class xmlConverter(object):
         _ast.In: handleAtomic,
         # _ast.Index: handleIndex,
         # _ast.Interactive: handleInteractive,
-        # _ast.Invert: handleInvert,
+        _ast.Invert: handleAtomic,
         _ast.Is: handleAtomic,
         _ast.IsNot: handleAtomic,
         # _ast.JoinedStr: handleJoinedstr,
         _ast.LShift: handleAtomic,
         _ast.Lambda: handleLambda,
-        # _ast.List: handleList,
+        _ast.List: handleList,
         _ast.ListComp: handleListComp,
         # _ast.Load: handleLoad,
         _ast.Lt: handleAtomic,
