@@ -307,6 +307,16 @@ class xmlConverter(object):
         return 1
 
 
+    def handleNamedExpr(self, doc, root, astnode):
+        if not self.handleNode(self.doc, root, astnode.value):
+            root.childNodes.pop(-1)
+
+        if not self.handleNode(self.doc, root, astnode.target):
+            root.childNodes.pop(-1)
+
+        return 1
+
+
     def handleExtSlice(self, doc, parent, astnode):
         pass
 
@@ -664,11 +674,6 @@ class xmlConverter(object):
     def handlecmpop(self, doc, parent, astnode):
         pass
 
-    def handlecomprehension(self, doc, parent, astnode):
-        pass
-
-    def handleexpr(self, doc, parent, astnode):
-        pass
 
     def handleexpr_context(self, doc, parent, astnode):
         pass
@@ -692,7 +697,6 @@ class xmlConverter(object):
     HANDLERS = {
         # _ast.AST: handleAst,
         _ast.Add: handleAtomic,
-        _ast.And: handleAtomic,
         # _ast.AnnAssign: handleAnnassign,
         _ast.Assert: handleAssert,
         _ast.Assign: handleAssign,
@@ -720,7 +724,6 @@ class xmlConverter(object):
         _ast.Dict: handleDict,
         _ast.DictComp: handleDictComp,
         _ast.Div: handleAtomic,
-        _ast.Eq: handleAtomic,
         _ast.ExceptHandler: handleExceptHandler,
         _ast.Expr: handleExpr,
         # _ast.Expression: handleExpression,
@@ -732,8 +735,12 @@ class xmlConverter(object):
         # _ast.FunctionType: handleFunctiontype,
         _ast.GeneratorExp: handleListComp,
         # _ast.Global: handleGlobal,
+        _ast.Eq: handleAtomic,
+        _ast.NotEq: handleAtomic,
         _ast.Gt: handleAtomic,
         _ast.GtE: handleAtomic,
+        _ast.Lt: handleAtomic,
+        _ast.LtE: handleAtomic,
         _ast.If: handleIf,
         _ast.IfExp: handleIf,
         _ast.Import: handleImport,
@@ -744,25 +751,23 @@ class xmlConverter(object):
         _ast.Invert: handleAtomic,
         _ast.Is: handleAtomic,
         _ast.IsNot: handleAtomic,
+        _ast.NotIn: handleAtomic,
         # _ast.JoinedStr: handleJoinedstr,
         _ast.LShift: handleAtomic,
         _ast.Lambda: handleLambda,
         _ast.List: handleList,
         _ast.ListComp: handleListComp,
         # _ast.Load: handleLoad,
-        _ast.Lt: handleAtomic,
-        _ast.LtE: handleAtomic,
         # _ast.MatMult: handleMatmult,
         _ast.Mod: handleAtomic,
         _ast.Module: handleModule,
         _ast.Mult: handleAtomic,
         _ast.Name: handleAtomic,
-        # _ast.NamedExpr: handleNamedexpr,
+        _ast.NamedExpr: handleNamedExpr,
         # _ast.Nonlocal: handleNonlocal,
-        _ast.Not: handleAtomic,
-        _ast.NotEq: handleAtomic,
-        _ast.NotIn: handleAtomic,
+        _ast.And: handleAtomic,
         _ast.Or: handleAtomic,
+        _ast.Not: handleAtomic,
         # _ast.Param: handleParam,
         _ast.Pass: handleAtomic,
         _ast.Pow: handleAtomic,
