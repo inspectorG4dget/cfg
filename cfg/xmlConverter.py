@@ -352,9 +352,6 @@ class xmlConverter(object):
         return 1
 
 
-    def handleGeneratorExp(self, doc, parent, astnode):
-        pass
-
     def handleGlobal(self, doc, parent, astnode):
         pass
 
@@ -720,7 +717,7 @@ class xmlConverter(object):
         # _ast.FormattedValue: handleFormattedvalue,
         _ast.FunctionDef: handleFunctionDef,
         # _ast.FunctionType: handleFunctiontype,
-        # _ast.GeneratorExp: handleGeneratorexp,
+        _ast.GeneratorExp: handleListComp,
         # _ast.Global: handleGlobal,
         _ast.Gt: handleAtomic,
         _ast.GtE: handleAtomic,
