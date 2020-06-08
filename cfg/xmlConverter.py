@@ -351,6 +351,7 @@ class xmlConverter(object):
 
         return 1
 
+
     def handleGeneratorExp(self, doc, parent, astnode):
         pass
 
@@ -751,7 +752,7 @@ class xmlConverter(object):
         _ast.Not: handleAtomic,
         _ast.NotEq: handleAtomic,
         _ast.NotIn: handleAtomic,
-        # _ast.Or: handleOr,
+        _ast.Or: handleAtomic,
         # _ast.Param: handleParam,
         _ast.Pass: handleAtomic,
         _ast.Pow: handleAtomic,
@@ -771,10 +772,9 @@ class xmlConverter(object):
         # _ast.TypeIgnore: handleTypeignore,
         _ast.UAdd: handleAtomic,
         _ast.USub: handleAtomic,
-        # _ast.UnaryOp: handleUnaryop,
         _ast.While: handleLoop,
         # _ast.With: handleWith,
-        # _ast.Yield: handleYield,
+        _ast.Yield: handleReturn,
         # _ast.YieldFrom: handleYieldfrom,
         # _ast.alias: handleAlias,
         # _ast.arg: handleArg,
