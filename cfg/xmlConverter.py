@@ -354,6 +354,11 @@ class xmlConverter(object):
         self.callstack.append("%s.%s" %(self.modname if self.modname else "module", astnode.name))
         self.FUNCTIONS["%s.%s" %(self.modname, self.funcname if self.funcname else astnode.name)] = astnode
 
+        for node in itertools.chain(astnode.args.args, astnode.args.posonlyargs, [astnode.args.vararg], astnode.args.kwonlyargs):
+            if node is None: continue
+            if node.annotation is not None and not self.handleNode(doc, root, node.annotation):
+                root.childNodes.pop(-1)
+
         for node in itertools.chain(astnode.args.defaults, astnode.args.kw_defaults):
             if not self.handleNode(doc, root, node):
                 root.childNodes.pop(-1)
