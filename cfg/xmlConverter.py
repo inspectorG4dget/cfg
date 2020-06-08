@@ -135,6 +135,7 @@ class xmlConverter(object):
     def handleAssign(self, doc, root, astnode):
         if not self.handleNode(doc, root, astnode.value):
             root.childNodes.pop(-1)
+        return 1
 
 
     def handleAugAssign(self, doc, root, astnode):
