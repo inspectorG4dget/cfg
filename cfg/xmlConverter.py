@@ -460,8 +460,13 @@ class xmlConverter(object):
 
         return 1
 
+
     def handleIndex(self, doc, parent, astnode):
-        pass
+        if not self.handleNode(doc, parent, astnode.value):
+            parent.childNodes.pop(-1)
+
+        return 1
+
 
     def handleInteractive(self, doc, parent, astnode):
         pass
@@ -723,7 +728,7 @@ class xmlConverter(object):
         _ast.Import: handleImport,
         _ast.ImportFrom: handleImportFrom,
         _ast.In: handleAtomic,
-        # _ast.Index: handleIndex,
+        _ast.Index: handleIndex,
         # _ast.Interactive: handleInteractive,
         _ast.Invert: handleAtomic,
         _ast.Is: handleAtomic,
