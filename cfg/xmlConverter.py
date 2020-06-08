@@ -16,567 +16,7 @@ class xmlConverter(object):
     MODULES = collections.defaultdict(set) # map module names to a set of their aliases
     callstack = [] # each item is an _ast object
     depth = 0
-    BUILTINFUNCS = set( # a set of python's builtin functions, that are not imported or defined
-                i.strip() for i in """
-                    hasattr
-                    lower
-                """.split())
-    BUILTINMODS = set( # a set of python's builtin modules, that are not imported or defined
-                    i.strip() for i in """
-                        ArgImagePlugin
-                        Audio_mac
-                        BaseHTTPServer
-                        Bastion
-                        BdfFontFile
-                        BmpImagePlugin
-                        BufrStubImagePlugin
-                        CGIHTTPServer
-                        Canvas
-                        Carbon
-                        CodeWarrior
-                        ColorPicker
-                        ConfigParser
-                        ContainerIO
-                        Cookie
-                        Crypto
-                        CurImagePlugin
-                        Cython
-                        DcxImagePlugin
-                        Dialog
-                        DocXMLRPCServer
-                        EasyDialogs
-                        EpsImagePlugin
-                        ExifTags
-                        Explorer
-                        FileDialog
-                        Finder
-                        FitsStubImagePlugin
-                        FixTk
-                        FliImagePlugin
-                        FontFile
-                        FpxImagePlugin
-                        FrameWork
-                        GbrImagePlugin
-                        GdImageFile
-                        GifImagePlugin
-                        GimpGradientFile
-                        GimpPaletteFile
-                        Gnuplot
-                        GribStubImagePlugin
-                        HTMLParser
-                        Hdf5StubImagePlugin
-                        IN
-                        IPython
-                        IcnsImagePlugin
-                        IcoImagePlugin
-                        ImImagePlugin
-                        Image
-                        ImageChops
-                        ImageCms
-                        ImageColor
-                        ImageDraw
-                        ImageDraw2
-                        ImageEnhance
-                        ImageFile
-                        ImageFileIO
-                        ImageFilter
-                        ImageFont
-                        ImageGL
-                        ImageGrab
-                        ImageMath
-                        ImageMode
-                        ImageOps
-                        ImagePalette
-                        ImagePath
-                        ImageQt
-                        ImageSequence
-                        ImageShow
-                        ImageStat
-                        ImageTk
-                        ImageTransform
-                        ImageWin
-                        ImtImagePlugin
-                        IptcImagePlugin
-                        JpegImagePlugin
-                        MacOS
-                        McIdasImagePlugin
-                        MicImagePlugin
-                        MimeWriter
-                        MiniAEFrame
-                        MpegImagePlugin
-                        MspImagePlugin
-                        Nav
-                        Netscape
-                        OSATerminology
-                        OleFileIO
-                        PIL
-                        PSDraw
-                        PaletteFile
-                        PalmImagePlugin
-                        PcdImagePlugin
-                        PcfFontFile
-                        PcxImagePlugin
-                        PdfImagePlugin
-                        PixMapWrapper
-                        PixarImagePlugin
-                        PngImagePlugin
-                        PpmImagePlugin
-                        PsdImagePlugin
-                        PyQt4
-                        Pycluster
-                        Queue
-                        ScrolledText
-                        SgiImagePlugin
-                        SimpleDialog
-                        SimpleHTTPServer
-                        SimpleXMLRPCServer
-                        SocketServer
-                        SpiderImagePlugin
-                        StdSuites
-                        StringIO
-                        SunImagePlugin
-                        SystemEvents
-                        TarIO
-                        Terminal
-                        TgaImagePlugin
-                        TiffImagePlugin
-                        TiffTags
-                        Tix
-                        Tkconstants
-                        Tkdnd
-                        Tkinter
-                        UserDict
-                        UserList
-                        UserString
-                        VBoxPython2_5
-                        VBoxPython2_6
-                        VBoxPython2_7
-                        WalImageFile
-                        WmfImagePlugin
-                        XVThumbImagePlugin
-                        XbmImagePlugin
-                        XpmImagePlugin
-                        _AE
-                        _AH
-                        _App
-                        _CF
-                        _CG
-                        _CarbonEvt
-                        _Cm
-                        _Ctl
-                        _Dlg
-                        _Drag
-                        _Evt
-                        _File
-                        _Fm
-                        _Folder
-                        _Help
-                        _IBCarbon
-                        _Icn
-                        _LWPCookieJar
-                        _Launch
-                        _List
-                        _Menu
-                        _Mlte
-                        _MozillaCookieJar
-                        _OSA
-                        _Qd
-                        _Qdoffs
-                        _Qt
-                        _Res
-                        _Scrap
-                        _Snd
-                        _TE
-                        _Win
-                        __builtin__
-                        __future__
-                        _abcoll
-                        _ast
-                        _bisect
-                        _bsddb
-                        _builtinSuites
-                        _codecs
-                        _codecs_cn
-                        _codecs_hk
-                        _codecs_iso2022
-                        _codecs_jp
-                        _codecs_kr
-                        _codecs_tw
-                        _collections
-                        _csv
-                        _ctypes
-                        _ctypes_test
-                        _curses
-                        _curses_panel
-                        _elementtree
-                        _functools
-                        _hashlib
-                        _heapq
-                        _hotshot
-                        _imaging
-                        _imagingft
-                        _imagingmath
-                        _imagingtk
-                        _io
-                        _json
-                        _locale
-                        _lsprof
-                        _multibytecodec
-                        _multiprocessing
-                        _pyio
-                        _random
-                        _scproxy
-                        _socket
-                        _sqlite3
-                        _sre
-                        _ssl
-                        _strptime
-                        _struct
-                        _symtable
-                        _testcapi
-                        _threading_local
-                        _tkinter
-                        _warnings
-                        _weakref
-                        _weakrefset
-                        abc
-                        aepack
-                        aetools
-                        aetypes
-                        aifc
-                        antigravity
-                        anydbm
-                        applesingle
-                        appletrawmain
-                        appletrunner
-                        argparse
-                        argvemulator
-                        array
-                        ast
-                        asynchat
-                        asyncore
-                        atexit
-                        audiodev
-                        audioop
-                        autoGIL
-                        autoreload
-                        base64
-                        bdb
-                        bgenlocations
-                        binascii
-                        binhex
-                        bisect
-                        blessings
-                        bsddb
-                        buildtools
-                        bundlebuilder
-                        bz2
-                        cPickle
-                        cProfile
-                        cStringIO
-                        calendar
-                        cfmfile
-                        cgi
-                        cgitb
-                        cheesecake
-                        chunk
-                        cmath
-                        cmd
-                        code
-                        codecs
-                        codeop
-                        collections
-                        colorsys
-                        commands
-                        compileall
-                        compiler
-                        contextlib
-                        contract
-                        cookielib
-                        copy
-                        copy_reg
-                        crypt
-                        csv
-                        ctypes
-                        ctypes_configure
-                        curses
-                        cython
-                        cythonmagic
-                        datetime
-                        dateutil
-                        dateutils
-                        dbhash
-                        dbm
-                        decimal
-                        decorator
-                        difflib
-                        dircache
-                        dis
-                        distutils
-                        doctest
-                        docutils
-                        dumbdbm
-                        dummy_thread
-                        dummy_threading
-                        easy_install
-                        email
-                        encodings
-                        errno
-                        exceptions
-                        fcntl
-                        filecmp
-                        fileinput
-                        findertools
-                        fnmatch
-                        formatter
-                        fpformat
-                        fractions
-                        ftplib
-                        functools
-                        future_builtins
-                        gc
-                        genericpath
-                        gensuitemodule
-                        gestalt
-                        getopt
-                        getpass
-                        gettext
-                        glob
-                        grp
-                        gzip
-                        hashlib
-                        heapq
-                        hmac
-                        hotshot
-                        htmlentitydefs
-                        htmllib
-                        httplib
-                        ic
-                        icglue
-                        icopen
-                        idlelib
-                        ihooks
-                        imageutils
-                        imaplib
-                        imghdr
-                        imp
-                        importlib
-                        imputil
-                        inspect
-                        io
-                        itertools
-                        jinja2
-                        json
-                        keyword
-                        lib2to3
-                        linecache
-                        locale
-                        logging
-                        lxml
-                        macerrors
-                        macostools
-                        macpath
-                        macresource
-                        macurl2path
-                        mailbox
-                        mailcap
-                        markupbase
-                        marshal
-                        math
-                        matplotlib
-                        md5
-                        mechanize
-                        mhlib
-                        mimetools
-                        mimetypes
-                        mimify
-                        mmap
-                        modulefinder
-                        mpl_toolkits
-                        multifile
-                        multiprocessing
-                        mutex
-                        netrc
-                        new
-                        nis
-                        nntplib
-                        nose
-                        ntpath
-                        nturl2path
-                        numbers
-                        numpy
-                        octavemagic
-                        opcode
-                        operator
-                        optparse
-                        os
-                        os2emxpath
-                        pandas
-                        parallelmagic
-                        paramiko
-                        parser
-                        pdb
-                        pickle
-                        pickletools
-                        pimp
-                        pip
-                        pipes
-                        pkg_resources
-                        pkgutil
-                        platform
-                        plistlib
-                        popen2
-                        poplib
-                        posix
-                        posixfile
-                        posixpath
-                        pprint
-                        profile
-                        pstats
-                        pty
-                        pwd
-                        py_compile
-                        pycallgraph
-                        pyclbr
-                        pydoc
-                        pydoc_data
-                        pyexpat
-                        pygame
-                        pygments
-                        pygraphviz
-                        pykalman
-                        pylab
-                        pymc
-                        pyparsing
-                        pytz
-                        pyximport
-                        quantities
-                        quopri
-                        random
-                        re
-                        readline
-                        repr
-                        requests
-                        resource
-                        rexec
-                        rfc822
-                        rlcompleter
-                        rmagic
-                        robotparser
-                        runpy
-                        runsnakerun
-                        sched
-                        scikits
-                        scipy
-                        select
-                        selenium
-                        sets
-                        setuptools
-                        sgmllib
-                        sha
-                        shelve
-                        shlex
-                        shutil
-                        signal
-                        sip
-                        sipconfig
-                        sipdistutils
-                        site
-                        six
-                        skimage
-                        sklearn
-                        smtpd
-                        smtplib
-                        sndhdr
-                        socket
-                        sphinx
-                        sphinx_pypi_upload
-                        sqlite3
-                        squaremap
-                        sre
-                        sre_compile
-                        sre_constants
-                        sre_parse
-                        ssl
-                        stat
-                        statsmodels
-                        statvfs
-                        storemagic
-                        string
-                        stringold
-                        stringprep
-                        strop
-                        struct
-                        subprocess
-                        sunau
-                        sunaudio
-                        symbol
-                        sympyprinting
-                        symtable
-                        sys
-                        sysconfig
-                        syslog
-                        tabnanny
-                        tarfile
-                        telnetlib
-                        tempfile
-                        terminalcommand
-                        termios
-                        test
-                        tests
-                        textwrap
-                        this
-                        thread
-                        threading
-                        time
-                        timeit
-                        tkColorChooser
-                        tkCommonDialog
-                        tkFileDialog
-                        tkFont
-                        tkMessageBox
-                        tkSimpleDialog
-                        toaiff
-                        token
-                        tokenize
-                        tornado
-                        trace
-                        traceback
-                        ttk
-                        tty
-                        turtle
-                        types
-                        unicodedata
-                        unittest
-                        urllib
-                        urllib2
-                        urlparse
-                        user
-                        uu
-                        uuid
-                        vboxapi
-                        vboxshell
-                        videoreader
-                        warnings
-                        wave
-                        weakref
-                        webbrowser
-                        whichdb
-                        wsgiref
-                        wx
-                        wxhack
-                        wxversion
-                        xdrlib
-                        xml
-                        xmllib
-                        xmlrpclib
-                        xxsubtype
-                        zipfile
-                        zipimport
-                        zlib
-                        zmq
-                    """.split()
-                )
+
 
     def __init__(self, codefilepath, imported, modname=None, doc=None):
         if not doc:
@@ -592,6 +32,10 @@ class xmlConverter(object):
         if not self.modname:
             self.modname = "module"
         self.funcname = None # used for handling aliasing the names of imported functions i.e. `from foo import bar as baz`
+
+        self.BUILTINFUNCS = set(  # a set of python's builtin functions, that are not imported or defined
+                                i.strip() for i in dir(__builtins__)
+                            )
 
 
     def findModuleFile(self, modname):
@@ -736,25 +180,20 @@ class xmlConverter(object):
 
 
     def handleCall(self, doc, root, astnode):
-        try:
-            if astnode.func.id in self.BUILTINFUNCS:
-                for arg in itertools.chain(astnode.args, (kw.value for kw in astnode.keywords)):
-                    if not self.handleNode(doc, root, arg):
-                        root.childNodes.pop(-1)
-                return 1
-        except AttributeError:
-            try:
-                if astnode.func.attr in self.BUILTINFUNCS:
-                    return 1
-            except AttributeError:
-                pass
+
+        for arg in itertools.chain(astnode.args, (kw.value for kw in astnode.keywords)):
+            if not self.handleNode(doc, root, arg):
+                root.childNodes.pop(-1)
+
+        if hasattr(astnode.func, 'id') and astnode.func.id in self.BUILTINFUNCS:
+            return 1
+
+        elif hasattr(astnode.func, 'attr') and astnode.func.attr in self.BUILTINFUNCS:
+            return 1
 
         if isinstance(astnode.func, _ast.Attribute):	# this is an imported function
             self.handleAttribute(doc, root, astnode.func)
         else:
-            for arg in itertools.chain(astnode.args, (kw.value for kw in astnode.keywords)):
-                if not self.handleNode(doc, root, arg):
-                    root.childNodes.pop(-1)
 
             handle = True
             popcall = False
@@ -820,7 +259,16 @@ class xmlConverter(object):
         pass
 
     def handleDictComp(self, doc, parent, astnode):
-        pass
+        for node in astnode.generators:
+            if not self.handleNode(doc, parent, node):
+                parent.childNodes.pop(-1)
+
+        if not self.handleNode(doc, parent, astnode.key):
+            parent.childNodes.pop(-1)
+        if not self.handleNode(doc, parent, astnode.value):
+            parent.childNodes.pop(-1)
+
+        return 1
 
     def handleEllipsis(self, doc, parent, astnode):
         pass
@@ -1024,8 +472,28 @@ class xmlConverter(object):
 
         return 1
 
+
     def handleListComp(self, doc, parent, astnode):
-        pass
+        for g in astnode.generators:
+            if not self.handleNode(doc, parent, g):
+                parent.childNodes.pop(-1)
+
+        if not self.handleNode(doc, parent, astnode.elt):
+            parent.childNodes.pop(-1)
+
+        return 1
+
+
+    def handleComprehension(self, doc, parent, astnode):
+        if not self.handleNode(doc, parent, astnode.iter):
+            parent.childNodes.pop(-1)
+
+        for node in astnode.ifs:
+            if not self.handleNode(doc, parent, node):
+                parent.childNodes.pop(-1)
+
+        return 1
+
 
     def handleLoad(self, doc, parent, astnode):
         pass
@@ -1061,8 +529,6 @@ class xmlConverter(object):
     def handleSet(self, doc, parent, astnode):
         pass
 
-    def handleSetComp(self, doc, parent, astnode):
-        pass
 
     def handleSlice(self, doc, root, astnode):
         if not self.handleNode(doc, root, astnode.lower):
@@ -1193,8 +659,6 @@ class xmlConverter(object):
     def handleoperator(self, doc, parent, astnode):
         pass
 
-    def handleslice(self, doc, parent, astnode):
-        pass
 
     def handlestmt(self, doc, parent, astnode):
         pass
@@ -1231,7 +695,7 @@ class xmlConverter(object):
         _ast.Del: handleAtomic,
         # _ast.Delete: handleDelete,
         # _ast.Dict: handleDict,
-        # _ast.DictComp: handleDictcomp,
+        _ast.DictComp: handleDictComp,
         _ast.Div: handleAtomic,
         _ast.Eq: handleAtomic,
         _ast.ExceptHandler: handleExceptHandler,
@@ -1261,7 +725,7 @@ class xmlConverter(object):
         _ast.LShift: handleAtomic,
         _ast.Lambda: handleLambda,
         # _ast.List: handleList,
-        # _ast.ListComp: handleListcomp,
+        _ast.ListComp: handleListComp,
         # _ast.Load: handleLoad,
         _ast.Lt: handleAtomic,
         _ast.LtE: handleAtomic,
@@ -1272,7 +736,7 @@ class xmlConverter(object):
         _ast.Name: handleAtomic,
         # _ast.NamedExpr: handleNamedexpr,
         # _ast.Nonlocal: handleNonlocal,
-        # _ast.Not: handleNot,
+        _ast.Not: handleAtomic,
         _ast.NotEq: handleAtomic,
         _ast.NotIn: handleAtomic,
         # _ast.Or: handleOr,
@@ -1283,11 +747,11 @@ class xmlConverter(object):
         # _ast.Raise: handleRaise,
         _ast.Return: handleReturn,
         # _ast.Set: handleSet,
-        # _ast.SetComp: handleSetcomp,
-        # _ast.slice: handleSlice,
+        _ast.SetComp: handleListComp,
+        _ast.slice: handleSlice,
         # _ast.Starred: handleStarred,
         # _ast.Store: handleStore,
-        # _ast.Sub: handleSub,
+        _ast.Sub: handleAtomic,
         _ast.Subscript: handleSubscript,
         # _ast.Suite: handleSuite,
         _ast.Try: handleTry,
@@ -1304,7 +768,7 @@ class xmlConverter(object):
         # _ast.arg: handleArg,
         # _ast.arguments: handleArguments,
         # _ast.cmpop: handleCmpop,
-        # _ast.comprehension: handleComprehension,
+        _ast.comprehension: handleComprehension,
         # _ast.keyword: handleKeyword,
         # _ast.operator: handleOperator,
         _ast.Slice: handleSlice,
