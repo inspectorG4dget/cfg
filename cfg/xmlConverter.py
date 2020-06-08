@@ -629,6 +629,14 @@ class xmlConverter(object):
 
         return 1
 
+
+    def handleRaise(self, doc, parent, astnode):
+        if not self.handleNode(doc, parent, astnode.exc):
+            parent.childNodes.pop(-1)
+
+        return 1
+
+
     def handleTuple(self, doc, parent, astnode):
         pass
 
@@ -759,7 +767,7 @@ class xmlConverter(object):
         _ast.Pass: handleAtomic,
         _ast.Pow: handleAtomic,
         _ast.RShift: handleAtomic,
-        # _ast.Raise: handleRaise,
+        _ast.Raise: handleRaise,
         _ast.Return: handleReturn,
         _ast.Set: handleList,
         _ast.SetComp: handleListComp,
