@@ -554,23 +554,9 @@ class xmlConverter(object):
         return 1
 
 
-    def handleTuple(self, doc, parent, astnode):
-        pass
-
-
-    def handlealias(self, doc, parent, astnode):
-        pass
-
     def handlearguments(self, doc, parent, astnode):
         pass
 
-
-    def handlecmpop(self, doc, parent, astnode):
-        pass
-
-
-    def handleexpr_context(self, doc, parent, astnode):
-        pass
 
     def handlekeyword(self, doc, parent, astnode):
         pass
@@ -578,15 +564,10 @@ class xmlConverter(object):
     def handleMod(self, doc, parent, astnode):
         pass
 
-    def handleoperator(self, doc, parent, astnode):
-        pass
-
 
     def handlestmt(self, doc, parent, astnode):
         pass
 
-    def handleunaryop(self, doc, parent, astnode):
-        pass
 
     HANDLERS = {
         _ast.Import: handleImport,
@@ -618,8 +599,6 @@ class xmlConverter(object):
         # _ast.AsyncFunctionDef: handleAsyncfunctiondef,
         # _ast.AsyncWith: handleAsyncwith,
         _ast.Attribute: handleAttribute,
-        # _ast.AugLoad: handleAugload,
-        # _ast.AugStore: handleAugstore,
         # _ast.Await: handleAwait,
         _ast.BinOp: (handleGeneric, *'left right op'.split()),
         _ast.UnaryOp: (handleGeneric, *'operand op'.split()),
@@ -685,36 +664,41 @@ class xmlConverter(object):
         _ast.ExceptHandler: handleExceptHandler,
         _ast.Raise: (handleGeneric, *'exc'.split()),
 
-        # _ast.Del: handleAtomic,
-        # _ast.Expression: handleExpression,
-        # _ast.ExtSlice: handleExtslice,
+        # _ast.ExtSlice: handleExtslice,  # must be for numpy or such
         # _ast.FormattedValue: handleFormattedvalue,
         # _ast.FunctionType: handleFunctiontype,
         _ast.Global: handleAtomic,
+        _ast.Nonlocal: handleAtomic,
 
         # _ast.Interactive: handleInteractive,
         # _ast.JoinedStr: handleJoinedstr,
         # _ast.Lambda: handleLambda,
-        # _ast.Load: handleLoad,
         # _ast.MatMult: handleMatmult,
         _ast.Module: handleModule,
-        # _ast.Nonlocal: handleNonlocal,
-        # _ast.Param: handleParam,
         # _ast.Starred: handleStarred,
-        # _ast.Store: handleStore,
         # _ast.Suite: handleSuite,
         # _ast.TypeIgnore: handleTypeignore,
         _ast.With: (handleMultiGeneric, *'body'.split()),
         _ast.withitem: (handleGeneric, *'context_expr context_vars'.split()),
 
-        # _ast.alias: handleAlias,
-        # _ast.arg: handleArg,
-        # _ast.arguments: handleArguments,
-        # _ast.cmpop: handleCmpop,
         # _ast.keyword: handleKeyword,
-        # _ast.operator: handleOperator,
+
+        ## Ignore these
+        # _ast.Expression: handleExpression,  # looks like an encapsulation of expr
+        # _ast.arguments: handleArguments,  # already handled in handleFunctionDef
+        # _ast.arg: handleArg,  # just the variablename for function arguments. Doesn't need to be handled
+        # _ast.alias: handleAlias,  # import aliases. Just variable names. Ignore
+        # _ast.cmpop: handleCmpop,  # handled in `compare`
+        # _ast.operator: handleOperator,  # handled with unaryop and binop
         # _ast.stmt: handleStmt,
         # _ast.type_ignore: handleType_Ignore,
+        # contexts:
+        # _ast.Load: handleLoad,
+        # _ast.Store: handleStore,
+        # _ast.AugLoad: handleAugLoad,
+        # _ast.AugStore: handleAugStore,
+        # _ast.Del: handleAtomic,
+        # _ast.Param: handleParam,
     }
 
 
