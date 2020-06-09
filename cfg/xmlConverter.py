@@ -481,11 +481,13 @@ class xmlConverter(object):
         self.handleGeneric(doc, root, astnode, 'body', multi=True)
 
         for handler in astnode.handlers:
-            childName = "except {}".format(handler.type.id)
+            childName = "except"
             child = doc.createElement(childName)
+            child.setAttribute('type', handler.type.id)
             child.appendChild(self.doc.createTextNode(str(handler.lineno)))
             root.appendChild(child)
 
+            self.handleGeneric(doc, child, handler, 'type', multi=False)
             self.handleGeneric(doc, child, handler, 'body', multi=True)
 
         if astnode.orelse:
