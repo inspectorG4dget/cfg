@@ -105,7 +105,12 @@ class xmlConverter(object):
     def handleAttribute(self, doc, root, astnode):
 
         funcname = astnode.attr
-        modname = astnode.value.id
+        if isinstance(astnode.value, _ast.Name):
+            modname = astnode.value.id
+        elif isinstance(astnode.value, _ast.Constant):
+            modname = astnode.value.value
+        else:
+            modname = astnode.value.__class__.__name__
 
         handle = True
         popcall = False
@@ -835,6 +840,7 @@ class xmlConverter(object):
         # _ast.Tuple: handleTuple,
         # _ast.TypeIgnore: handleTypeignore,
         _ast.With: handleWith,
+        _ast.withitem: handleWithItem,
         # _ast.alias: handleAlias,
         # _ast.arg: handleArg,
         # _ast.arguments: handleArguments,
@@ -843,7 +849,6 @@ class xmlConverter(object):
         # _ast.operator: handleOperator,
         # _ast.stmt: handleStmt,
         # _ast.type_ignore: handleType_Ignore,
-        _ast.withitem: handleWithItem,
     }
 
 
