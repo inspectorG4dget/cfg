@@ -89,9 +89,13 @@ class xmlConverter(object):
         parent.appendChild(child)
 
         handler = self.HANDLERS[astnode.__class__]
-        params = []
-        if isinstance(handler, tuple): handler, params = handler[0], handler[1:]
-        if not handler(self, doc, child, astnode, *params):
+        if isinstance(handler, tuple):
+            handler, params = handler[0], handler[1:]
+            multi=False
+            if len(params)==2: params, multi = params
+            return self.handleGeneric(doc, child, astnode, *params, multi=multi)
+
+        if not handler(self, doc, child, astnode):
             parent.childNodes.pop(-1)
 
         return 1
@@ -136,16 +140,11 @@ class xmlConverter(object):
             self.callstack.pop(-1)
 
 
-    def handleGeneric(self, doc, root, astnode, *attrs):
+    def handleGeneric(self, doc, root, astnode, *attrs, multi=False):
         for attr in attrs:
-            if not self.handleNode(doc, root, getattr(astnode, attr)):
-                root.childNodes.pop(-1)
-        return 1
-
-
-    def handleMultiGeneric(self, doc, root, astnode, *attrs):
-        for attr in attrs:
-            for node in getattr(astnode, attr):
+            nodes = getattr(astnode, attr)
+            if not multi: nodes = [nodes]
+            for node in nodes:
                 if not self.handleNode(doc, root, node):
                     root.childNodes.pop(-1)
         return 1
@@ -153,7 +152,7 @@ class xmlConverter(object):
 
     def handleBoolOp(self, doc, root, astnode):
 
-        self.handleMultiGeneric(doc, root, astnode, "values")
+        self.handleGeneric(doc, root, astnode, "values", multi=True)
         self.handleGeneric(doc, root, astnode, "op")
 
         return 1
@@ -223,7 +222,7 @@ class xmlConverter(object):
             if not self.handleNode(doc, root, node):
                 root.childNodes.pop(-1)
 
-        self.handleMultiGeneric(doc, root, astnode, 'ops')
+        self.handleGeneric(doc, root, astnode, 'ops', multi=True)
 
         return 1
 
@@ -432,7 +431,7 @@ class xmlConverter(object):
 
 
     def handleListComp(self, doc, parent, astnode):
-        self.handleMultiGeneric(doc, parent, astnode, 'generators')
+        self.handleGeneric(doc, parent, astnode, 'generators', multi=True)
         self.handleGeneric(doc, parent, "elt")
 
         return 1
@@ -440,7 +439,7 @@ class xmlConverter(object):
 
     def handleComprehension(self, doc, parent, astnode):
         self.handleGeneric(doc, parent, "iter")
-        self.handleMultiGeneric(doc, parent, 'ifs')
+        self.handleGeneric(doc, parent, 'ifs', multi=True)
 
         return 1
 
@@ -478,7 +477,7 @@ class xmlConverter(object):
 
     def handleTry(self, doc, root, astnode):
 
-        self.handleMultiGeneric(doc, root, astnode, 'body')
+        self.handleGeneric(doc, root, astnode, 'body', multi=True)
 
         for handler in astnode.handlers:
             childName = "except {}".format(handler.type.id)
@@ -486,21 +485,21 @@ class xmlConverter(object):
             child.appendChild(self.doc.createTextNode(str(handler.lineno)))
             root.appendChild(child)
 
-            self.handleMultiGeneric(doc, child, handler, 'body')
+            self.handleGeneric(doc, child, handler, 'body', multi=True)
 
         if astnode.orelse:
             childName = 'exceptElse'
             child = doc.createElement(childName)
             child.appendChild(self.doc.createTextNode(str(astnode.finalbody[0].lineno)))
             root.appendChild(child)
-            self.handleMultiGeneric(doc, child, astnode, 'orelse')
+            self.handleGeneric(doc, child, astnode, 'orelse', multi=True)
 
         if astnode.finalbody:
             childName = "finally"
             child = doc.createElement(childName)
             child.appendChild(self.doc.createTextNode(str(astnode.finalbody[0].lineno)))
             root.appendChild(child)
-            self.handleMultiGeneric(doc, child, astnode, 'finalbody')
+            self.handleGeneric(doc, child, astnode, 'finalbody', multi=True)
 
         return 1
 
@@ -531,7 +530,7 @@ class xmlConverter(object):
         _ast.AugAssign: (handleGeneric, *'target op value'.split()),
         _ast.NamedExpr: (handleGeneric, *'target op value'.split()),
         # _ast.AnnAssign: handleAnnassign,
-        _ast.Delete: (handleMultiGeneric, 'targets'),
+        _ast.Delete: (handleGeneric, 'targets', True),
 
         _ast.Compare: handleCompare,
         _ast.Assert: (handleGeneric, 'test'),
@@ -558,13 +557,13 @@ class xmlConverter(object):
         _ast.Continue: handleAtomic,
         _ast.Pass: handleAtomic,
 
-        _ast.List: (handleMultiGeneric, 'elts'),
-        _ast.Tuple: (handleMultiGeneric, 'elts'),
+        _ast.List: (handleGeneric, 'elts'.split(), True),
+        _ast.Tuple: (handleGeneric, 'elts'.split(), True),
         _ast.Dict: handleDict,
-         _ast.Set: (handleMultiGeneric, 'elts'),
-        _ast.Subscript: (handleGeneric, *'value slice'.split()),
+         _ast.Set: (handleGeneric, 'elts'.split(), True),
+        _ast.Subscript: (handleGeneric, 'value slice'.split()),
         _ast.slice: handleSlice,
-        _ast.Index: (handleGeneric, *'value'.split()),
+        _ast.Index: (handleGeneric, 'value'.split()),
 
         _ast.comprehension: handleComprehension,
         _ast.GeneratorExp: handleListComp,
@@ -593,16 +592,16 @@ class xmlConverter(object):
         _ast.IfExp: handleIf,
 
         _ast.FunctionDef: handleFunctionDef,
-        _ast.Return: (handleGeneric, *'value'.split()),
-        _ast.Yield: (handleGeneric, *'value'.split()),
-        _ast.YieldFrom: (handleGeneric, *'value'.split()),
+        _ast.Return: (handleGeneric, 'value'.split()),
+        _ast.Yield: (handleGeneric, 'value'.split()),
+        _ast.YieldFrom: (handleGeneric, 'value'.split()),
         _ast.Call: handleCall,
 
-        _ast.ClassDef: (handleGeneric, *'body'.split()),
+        _ast.ClassDef: (handleGeneric, 'body'.split()),
 
         _ast.Try: handleTry,
         _ast.ExceptHandler: handleExceptHandler,
-        _ast.Raise: (handleGeneric, *'exc'.split()),
+        _ast.Raise: (handleGeneric, 'exc'.split()),
 
         # _ast.ExtSlice: handleExtslice,  # must be for numpy or such
         # _ast.FormattedValue: handleFormattedvalue,
@@ -618,7 +617,7 @@ class xmlConverter(object):
         # _ast.Starred: handleStarred,
         # _ast.Suite: handleSuite,
         # _ast.TypeIgnore: handleTypeignore,
-        _ast.With: (handleMultiGeneric, *'body'.split()),
+        _ast.With: (handleGeneric, 'body'.split(), True),
         _ast.withitem: (handleGeneric, *'context_expr context_vars'.split()),
 
         # _ast.keyword: handleKeyword,
