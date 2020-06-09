@@ -151,13 +151,6 @@ class xmlConverter(object):
         return 1
 
 
-    def handleAugLoad(self, doc, parent, astnode):
-        pass
-
-    def handleAugStore(self, doc, parent, astnode):
-        pass
-
-
     def handleBoolOp(self, doc, root, astnode):
 
         self.handleMultiGeneric(doc, root, astnode, "values")
@@ -301,6 +294,7 @@ class xmlConverter(object):
 
         return 1
 
+
     def handleFunctionDef(self, doc, root, astnode):
         self.callstack.append("%s.%s" %(self.modname if self.modname else "module", astnode.name))
         self.FUNCTIONS["%s.%s" %(self.modname, self.funcname if self.funcname else astnode.name)] = astnode
@@ -404,6 +398,7 @@ class xmlConverter(object):
 
         return 1
 
+
     def handleImportFrom(self, doc, root, astnode): # TODO: Expand class and function defs inline
         self.IMPORT_FILES.add(self.findModuleFile(astnode.module))
         for name in astnode.names:
@@ -432,12 +427,6 @@ class xmlConverter(object):
         pass
 
 
-    def handleIsNot(self, doc, parent, astnode):
-        pass
-
-    def handleLShift(self, doc, parent, astnode):
-        pass
-
     def handleLambda(self, doc, parent, astnode):
         pass
 
@@ -456,10 +445,6 @@ class xmlConverter(object):
         return 1
 
 
-    def handleLoad(self, doc, parent, astnode):
-        pass
-
-
     def handleModule(self, doc, root, astnode):
 
         root.appendChild(self.doc.createTextNode(str(0)))
@@ -472,18 +457,6 @@ class xmlConverter(object):
             if not self.imported or any((isinstance(astnode, astype) for astype in [_ast.Module, _ast.FunctionDef, _ast.ClassDef])):
                 if not self.handleNode(doc, root, node):
                     root.childNodes.pop(-1)
-
-        return 1
-
-
-    def handleParam(self, doc, parent, astnode):
-        pass
-
-
-    def handleRepr(self, doc, root, astnode):
-
-        if not self.handleNode(doc, root, astnode.value):
-            root.childNodes.pop(-1)
 
         return 1
 
@@ -501,28 +474,6 @@ class xmlConverter(object):
 
     def handleSuite(self, doc, parent, astnode):
         pass
-
-
-    def handleTryExcept(self, doc, root, astnode):
-
-        for node in astnode.body:
-            if not self.handleNode(doc, root, node):
-                root.childNodes.pop(-1)
-
-        for node in astnode.handlers:
-            if not self.handleNode(doc, root, node):
-                root.childNodes.pop(-1)
-
-        for node in astnode.orelse:
-            childName = "else"
-            child = doc.createElement(childName)
-            child.appendChild(self.doc.createTextNode(str(node.lineno)))
-            root.appendChild(child)
-
-            if not self.handleNode(doc, child, node):
-                child.childNodes.pop(-1)
-
-        return 1
 
 
     def handleTry(self, doc, root, astnode):
@@ -554,18 +505,7 @@ class xmlConverter(object):
         return 1
 
 
-    def handlearguments(self, doc, parent, astnode):
-        pass
-
-
     def handlekeyword(self, doc, parent, astnode):
-        pass
-
-    def handleMod(self, doc, parent, astnode):
-        pass
-
-
-    def handlestmt(self, doc, parent, astnode):
         pass
 
 
