@@ -640,6 +640,7 @@ class xmlConverter(object):
         _ast.Pass: handleAtomic,
 
         _ast.List: (handleMultiGeneric, 'elts'),
+        _ast.Tuple: (handleMultiGeneric, 'elts'),
         _ast.Dict: handleDict,
          _ast.Set: (handleMultiGeneric, 'elts'),
         _ast.Subscript: (handleGeneric, *'value slice'.split()),
@@ -702,7 +703,6 @@ class xmlConverter(object):
         # _ast.Starred: handleStarred,
         # _ast.Store: handleStore,
         # _ast.Suite: handleSuite,
-        # _ast.Tuple: handleTuple,
         # _ast.TypeIgnore: handleTypeignore,
         _ast.With: (handleMultiGeneric, *'body'.split()),
         _ast.withitem: (handleGeneric, *'context_expr context_vars'.split()),
