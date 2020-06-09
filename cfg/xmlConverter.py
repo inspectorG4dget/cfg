@@ -93,6 +93,7 @@ class xmlConverter(object):
             handler, params = handler[0], handler[1:]
             multi=False
             if len(params)==2: params, multi = params
+            else: params = params[0]
             return self.handleGeneric(doc, child, astnode, *params, multi=multi)
 
         if not handler(self, doc, child, astnode):
@@ -463,9 +464,9 @@ class xmlConverter(object):
     def handleSlice(self, doc, root, astnode):
         if astnode.lower is not None and not self.handleNode(doc, root, astnode.lower):
             root.childNodes.pop(-1)
-        if astnode.lower is not None and not self.handleNode(doc, root, astnode.step if astnode.step else _ast.Num(1)):
+        if astnode.lower is not None and not self.handleNode(doc, root, astnode.step if astnode.step else _ast.Constant(1)):
             root.childNodes.pop(-1)
-        if astnode.lower is not None and not self.handleNode(doc, root, astnode.upper):
+        if astnode.upper is not None and not self.handleNode(doc, root, astnode.upper):
             root.childNodes.pop(-1)
 
         return 1
@@ -525,22 +526,22 @@ class xmlConverter(object):
         _ast.USub: handleAtomic,
 
         _ast.Name: handleAtomic,
-        _ast.Expr: (handleGeneric, 'value'),
-        _ast.Assign: (handleGeneric, 'value'),
+        _ast.Expr: (handleGeneric, 'value'.split()),
+        _ast.Assign: (handleGeneric, 'value'.split()),
         _ast.AugAssign: (handleGeneric, *'target op value'.split()),
         _ast.NamedExpr: (handleGeneric, *'target op value'.split()),
         # _ast.AnnAssign: handleAnnassign,
-        _ast.Delete: (handleGeneric, 'targets', True),
+        _ast.Delete: (handleGeneric, 'targets'.split(), True),
 
         _ast.Compare: handleCompare,
-        _ast.Assert: (handleGeneric, 'test'),
+        _ast.Assert: (handleGeneric, 'test'.split()),
         # _ast.AsyncFor: handleAsyncfor,
         # _ast.AsyncFunctionDef: handleAsyncfunctiondef,
         # _ast.AsyncWith: handleAsyncwith,
         _ast.Attribute: handleAttribute,
         # _ast.Await: handleAwait,
-        _ast.BinOp: (handleGeneric, *'left right op'.split()),
-        _ast.UnaryOp: (handleGeneric, *'operand op'.split()),
+        _ast.BinOp: (handleGeneric, 'left right op'.split()),
+        _ast.UnaryOp: (handleGeneric, 'operand op'.split()),
         _ast.BoolOp: handleBoolOp,
 
         _ast.BitAnd: handleAtomic,
@@ -562,7 +563,7 @@ class xmlConverter(object):
         _ast.Dict: handleDict,
          _ast.Set: (handleGeneric, 'elts'.split(), True),
         _ast.Subscript: (handleGeneric, 'value slice'.split()),
-        _ast.slice: handleSlice,
+        _ast.Slice: handleSlice,
         _ast.Index: (handleGeneric, 'value'.split()),
 
         _ast.comprehension: handleComprehension,
@@ -618,7 +619,7 @@ class xmlConverter(object):
         # _ast.Suite: handleSuite,
         # _ast.TypeIgnore: handleTypeignore,
         _ast.With: (handleGeneric, 'body'.split(), True),
-        _ast.withitem: (handleGeneric, *'context_expr context_vars'.split()),
+        _ast.withitem: (handleGeneric, 'context_expr context_vars'.split()),
 
         # _ast.keyword: handleKeyword,
 
