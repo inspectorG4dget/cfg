@@ -76,6 +76,7 @@ class xmlConverter(object):
     def getRoot(self, filepath):
         return compile(open(filepath).read(), filepath, 'exec', _ast.PyCF_ONLY_AST)
 
+
     def handleNode(self, doc, parent, astnode):
         childName = self.getName(astnode)
         child = doc.createElement(childName)
@@ -87,20 +88,22 @@ class xmlConverter(object):
             child.appendChild(self.doc.createTextNode(label))
         parent.appendChild(child)
 
-        if not self.HANDLERS[astnode.__class__](self, doc, child, astnode):
+        handler = self.HANDLERS[astnode.__class__]
+        if isinstance(handler, tuple):
+            handler, params = handler[0], handler[1:]
+            multi=False
+            if len(params)==2: params, multi = params
+            return self.handleGeneric(doc, child, astnode, *params, multi=multi)
+
+        if not handler(self, doc, child, astnode):
             parent.childNodes.pop(-1)
 
         return 1
 
+
     def handleAtomic(self, doc, parent, astnode):
         return 1
 
-    def handleAssert(self, doc, root, astnode):
-
-        if not self.handleNode(doc, root, astnode.test):
-            root.childnodes.pop(-1)
-
-        return 1
 
     def handleAttribute(self, doc, root, astnode):
 
@@ -137,52 +140,20 @@ class xmlConverter(object):
             self.callstack.pop(-1)
 
 
-    def handleAssign(self, doc, root, astnode):
-        if not self.handleNode(doc, root, astnode.value):
-            root.childNodes.pop(-1)
-        return 1
-
-
-    def handleAugAssign(self, doc, root, astnode):
-
-        if not self.handleNode(doc, root, astnode.target):
-            root.childNodes.pop(-1)
-
-        if not self.handleNode(doc, root, astnode.op):
-            root.childNodes.pop(-1)
-
-        if not self.handleNode(doc, root, astnode.value):
-            root.childNodes.pop(-1)
-
-        return 1
-
-    def handleAugLoad(self, doc, parent, astnode):
-        pass
-
-    def handleAugStore(self, doc, parent, astnode):
-        pass
-
-    def handleBinOp(self, doc, root, astnode):
-
-        if not self.handleNode(doc, root, astnode.left):
-            root.childNodes.pop(-1)
-
-        if not self.handleNode(doc, root, astnode.right):
-            root.childNodes.pop(-1)
-
-        if not self.handleNode(doc, root, astnode.op):
-            root.childNodes.pop(-1)
-
+    def handleGeneric(self, doc, root, astnode, *attrs, multi=False):
+        for attr in attrs:
+            nodes = getattr(astnode, attr)
+            if not multi: nodes = [nodes]
+            for node in nodes:
+                if not self.handleNode(doc, root, node):
+                    root.childNodes.pop(-1)
         return 1
 
 
     def handleBoolOp(self, doc, root, astnode):
 
-        for node in astnode.values:
-            if not self.handleNode(doc, root, node):
-                root.childNodes.pop(-1)
-        if not self.handleNode(doc, root, astnode.op):
-            root.childNodes.pop(-1)
+        self.handleGeneric(doc, root, astnode, "values", multi=True)
+        self.handleGeneric(doc, root, astnode, "op")
 
         return 1
 
@@ -243,14 +214,6 @@ class xmlConverter(object):
         return 1
 
 
-    def handleClassDef(self, doc, parent, astnode):
-        for node in astnode.body:
-            if not self.handleNode(doc, parent, node):
-                parent.childNodes.pop(-1)
-
-        return 1
-
-
     def handleCompare(self, doc, root, astnode):
 
         for node in itertools.chain([astnode.left] if hasattr(astnode, 'left') else [],
@@ -259,16 +222,7 @@ class xmlConverter(object):
             if not self.handleNode(doc, root, node):
                 root.childNodes.pop(-1)
 
-        for op in astnode.ops:
-            if not self.handleNode(doc, root, op):
-                root.childNodes.pop(-1)
-
-        return 1
-
-    def handleDelete(self, doc, parent, astnode):
-        for node in astnode.targets:
-            if not self.handleNode(doc, parent, node):
-                parent.childNodes.pop(-1)
+        self.handleGeneric(doc, root, astnode, 'ops', multi=True)
 
         return 1
 
@@ -310,22 +264,6 @@ class xmlConverter(object):
     def handleExec(self, doc, parent, astnode):
         pass
 
-    def handleExpr(self, doc, root, astnode):
-        if not self.handleNode(self.doc, root, astnode.value):
-            root.childNodes.pop(-1)
-
-        return 1
-
-
-    def handleNamedExpr(self, doc, root, astnode):
-        if not self.handleNode(self.doc, root, astnode.value):
-            root.childNodes.pop(-1)
-
-        if not self.handleNode(self.doc, root, astnode.target):
-            root.childNodes.pop(-1)
-
-        return 1
-
 
     def handleExtSlice(self, doc, parent, astnode):
         pass
@@ -355,6 +293,7 @@ class xmlConverter(object):
 
         return 1
 
+
     def handleFunctionDef(self, doc, root, astnode):
         self.callstack.append("%s.%s" %(self.modname if self.modname else "module", astnode.name))
         self.FUNCTIONS["%s.%s" %(self.modname, self.funcname if self.funcname else astnode.name)] = astnode
@@ -378,13 +317,6 @@ class xmlConverter(object):
         return 1
 
 
-    def handleReturn(self, doc, root, astnode):
-        if not self.handleNode(doc, root, astnode.value):
-            root.childNodes.pop(-1)
-
-        return 1
-
-
     def handleIf(self, doc, root, astnode):
         if not self.handleNode(doc, root, astnode.test):
             root.childNodes.pop(-1)
@@ -404,6 +336,7 @@ class xmlConverter(object):
                     child.childNodes.pop(-1)
 
         return 1
+
 
     def handleImport(self, doc, root, astnode): # TODO: Expand class and function defs inline
         for imported in astnode.names:
@@ -464,6 +397,7 @@ class xmlConverter(object):
 
         return 1
 
+
     def handleImportFrom(self, doc, root, astnode): # TODO: Expand class and function defs inline
         self.IMPORT_FILES.add(self.findModuleFile(astnode.module))
         for name in astnode.names:
@@ -488,59 +422,26 @@ class xmlConverter(object):
         return 1
 
 
-    def handleIndex(self, doc, parent, astnode):
-        if not self.handleNode(doc, parent, astnode.value):
-            parent.childNodes.pop(-1)
-
-        return 1
-
-
     def handleInteractive(self, doc, parent, astnode):
         pass
 
 
-    def handleIsNot(self, doc, parent, astnode):
-        pass
-
-    def handleLShift(self, doc, parent, astnode):
-        pass
-
     def handleLambda(self, doc, parent, astnode):
         pass
 
-    def handleList(self, doc, root, astnode):
-
-        for node in astnode.elts:
-            if not self.handleNode(doc, root, node):
-                root.childNodes.pop(-1)
-
-        return 1
-
 
     def handleListComp(self, doc, parent, astnode):
-        for g in astnode.generators:
-            if not self.handleNode(doc, parent, g):
-                parent.childNodes.pop(-1)
-
-        if not self.handleNode(doc, parent, astnode.elt):
-            parent.childNodes.pop(-1)
+        self.handleGeneric(doc, parent, astnode, 'generators', multi=True)
+        self.handleGeneric(doc, parent, "elt")
 
         return 1
 
 
     def handleComprehension(self, doc, parent, astnode):
-        if not self.handleNode(doc, parent, astnode.iter):
-            parent.childNodes.pop(-1)
-
-        for node in astnode.ifs:
-            if not self.handleNode(doc, parent, node):
-                parent.childNodes.pop(-1)
+        self.handleGeneric(doc, parent, "iter")
+        self.handleGeneric(doc, parent, 'ifs', multi=True)
 
         return 1
-
-
-    def handleLoad(self, doc, parent, astnode):
-        pass
 
 
     def handleModule(self, doc, root, astnode):
@@ -554,19 +455,7 @@ class xmlConverter(object):
             # handle only functiondefs and classdefs in an imported module. Handle everything in the main (executed) module
             if not self.imported or any((isinstance(astnode, astype) for astype in [_ast.Module, _ast.FunctionDef, _ast.ClassDef])):
                 if not self.handleNode(doc, root, node):
-                    child.childNodes.pop(-1)
-
-        return 1
-
-
-    def handleParam(self, doc, parent, astnode):
-        pass
-
-
-    def handleRepr(self, doc, root, astnode):
-
-        if not self.handleNode(doc, root, astnode.value):
-            root.childNodes.pop(-1)
+                    root.childNodes.pop(-1)
 
         return 1
 
@@ -582,46 +471,13 @@ class xmlConverter(object):
         return 1
 
 
-    def handleSubscript(self, doc, root, astnode):
-
-        if not self.handleNode(doc, root, astnode.value):
-            root.childNodes.pop(-1)
-        if not self.handleNode(doc, root, astnode.slice):
-            root.childNodes.pop(-1)
-
-        return 1
-
-
     def handleSuite(self, doc, parent, astnode):
         pass
 
 
-    def handleTryExcept(self, doc, root, astnode):
-
-        for node in astnode.body:
-            if not self.handleNode(doc, root, node):
-                root.childNodes.pop(-1)
-
-        for node in astnode.handlers:
-            if not self.handleNode(doc, root, node):
-                root.childNodes.pop(-1)
-
-        for node in astnode.orelse:
-            childName = "else"
-            child = doc.createElement(childName)
-            child.appendChild(self.doc.createTextNode(str(node.lineno)))
-            root.appendChild(child)
-
-            if not self.handleNode(doc, child, node):
-                child.childNodes.pop(-1)
-
-        return 1
-
     def handleTry(self, doc, root, astnode):
 
-        for node in astnode.body:
-            if not self.handleNode(doc, root, node):
-                root.childNodes.pop(-1)
+        self.handleGeneric(doc, root, astnode, 'body', multi=True)
 
         for handler in astnode.handlers:
             childName = "except {}".format(handler.type.id)
@@ -629,99 +485,28 @@ class xmlConverter(object):
             child.appendChild(self.doc.createTextNode(str(handler.lineno)))
             root.appendChild(child)
 
-            for node in handler.body:
-                if not self.handleNode(doc, child, node):
-                    child.childNodes.pop(-1)
+            self.handleGeneric(doc, child, handler, 'body', multi=True)
 
         if astnode.orelse:
             childName = 'exceptElse'
             child = doc.createElement(childName)
             child.appendChild(self.doc.createTextNode(str(astnode.finalbody[0].lineno)))
             root.appendChild(child)
-            for node in astnode.orelse:
-                if not self.handleNode(doc, child, node):
-                    child.childNodes.pop(-1)
+            self.handleGeneric(doc, child, astnode, 'orelse', multi=True)
 
         if astnode.finalbody:
             childName = "finally"
             child = doc.createElement(childName)
             child.appendChild(self.doc.createTextNode(str(astnode.finalbody[0].lineno)))
             root.appendChild(child)
-            for node in astnode.finalbody:
-                if not self.handleNode(doc, child, node):
-                    child.childNodes.pop(-1)
+            self.handleGeneric(doc, child, astnode, 'finalbody', multi=True)
 
         return 1
 
-
-    def handleRaise(self, doc, parent, astnode):
-        if not self.handleNode(doc, parent, astnode.exc):
-            parent.childNodes.pop(-1)
-
-        return 1
-
-
-    def handleTuple(self, doc, parent, astnode):
-        pass
-
-
-    def handleUnaryOp(self, doc, root, astnode):
-        if not self.handleNode(doc, root, astnode.operand):
-            root.childNodes.pop(-1)
-
-        if not self.handleNode(doc, root, astnode.op):
-            root.childNodes.pop(-1)
-
-        return 1
-
-
-    def handleWith(self, doc, parent, astnode):
-        for node in itertools.chain(astnode.items, astnode.body):
-            if not self.handleNode(doc, parent, node):
-                parent.childNodes.pop(-1)
-
-        return 1
-
-
-    def handleWithItem(self, doc, parent, astnode):
-
-        if not self.handleNode(doc, parent, astnode.context_expr):
-            parent.childNodes.pop(-1)
-
-        if not self.handleNode(doc, parent, astnode.optional_vars):
-            parent.childNodes.pop(-1)
-
-        return 1
-
-    def handlealias(self, doc, parent, astnode):
-        pass
-
-    def handlearguments(self, doc, parent, astnode):
-        pass
-
-
-    def handlecmpop(self, doc, parent, astnode):
-        pass
-
-
-    def handleexpr_context(self, doc, parent, astnode):
-        pass
 
     def handlekeyword(self, doc, parent, astnode):
         pass
 
-    def handleMod(self, doc, parent, astnode):
-        pass
-
-    def handleoperator(self, doc, parent, astnode):
-        pass
-
-
-    def handlestmt(self, doc, parent, astnode):
-        pass
-
-    def handleunaryop(self, doc, parent, astnode):
-        pass
 
     HANDLERS = {
         _ast.Import: handleImport,
@@ -740,24 +525,22 @@ class xmlConverter(object):
         _ast.USub: handleAtomic,
 
         _ast.Name: handleAtomic,
-        _ast.Expr: handleExpr,
-        _ast.Assign: handleAssign,
-        _ast.AugAssign: handleAugAssign,
-        _ast.NamedExpr: handleNamedExpr,
+        _ast.Expr: (handleGeneric, 'value'),
+        _ast.Assign: (handleGeneric, 'value'),
+        _ast.AugAssign: (handleGeneric, *'target op value'.split()),
+        _ast.NamedExpr: (handleGeneric, *'target op value'.split()),
         # _ast.AnnAssign: handleAnnassign,
-        _ast.Delete: handleDelete,
+        _ast.Delete: (handleGeneric, 'targets', True),
 
         _ast.Compare: handleCompare,
-        _ast.Assert: handleAssert,
+        _ast.Assert: (handleGeneric, 'test'),
         # _ast.AsyncFor: handleAsyncfor,
         # _ast.AsyncFunctionDef: handleAsyncfunctiondef,
         # _ast.AsyncWith: handleAsyncwith,
         _ast.Attribute: handleAttribute,
-        # _ast.AugLoad: handleAugload,
-        # _ast.AugStore: handleAugstore,
         # _ast.Await: handleAwait,
-        _ast.BinOp: handleBinOp,
-        _ast.UnaryOp: handleUnaryOp,
+        _ast.BinOp: (handleGeneric, *'left right op'.split()),
+        _ast.UnaryOp: (handleGeneric, *'operand op'.split()),
         _ast.BoolOp: handleBoolOp,
 
         _ast.BitAnd: handleAtomic,
@@ -774,12 +557,13 @@ class xmlConverter(object):
         _ast.Continue: handleAtomic,
         _ast.Pass: handleAtomic,
 
-        _ast.List: handleList,
+        _ast.List: (handleGeneric, 'elts'.split(), True),
+        _ast.Tuple: (handleGeneric, 'elts'.split(), True),
         _ast.Dict: handleDict,
-        _ast.Set: handleList,
-        _ast.Subscript: handleSubscript,
+         _ast.Set: (handleGeneric, 'elts'.split(), True),
+        _ast.Subscript: (handleGeneric, 'value slice'.split()),
         _ast.slice: handleSlice,
-        _ast.Index: handleIndex,
+        _ast.Index: (handleGeneric, 'value'.split()),
 
         _ast.comprehension: handleComprehension,
         _ast.GeneratorExp: handleListComp,
@@ -808,47 +592,52 @@ class xmlConverter(object):
         _ast.IfExp: handleIf,
 
         _ast.FunctionDef: handleFunctionDef,
-        _ast.Return: handleReturn,
-        _ast.Yield: handleReturn,
-        _ast.YieldFrom: handleReturn,
+        _ast.Return: (handleGeneric, 'value'.split()),
+        _ast.Yield: (handleGeneric, 'value'.split()),
+        _ast.YieldFrom: (handleGeneric, 'value'.split()),
         _ast.Call: handleCall,
 
-        _ast.ClassDef: handleClassDef,
+        _ast.ClassDef: (handleGeneric, 'body'.split()),
 
         _ast.Try: handleTry,
         _ast.ExceptHandler: handleExceptHandler,
-        _ast.Raise: handleRaise,
+        _ast.Raise: (handleGeneric, 'exc'.split()),
 
-        # _ast.Del: handleAtomic,
-        # _ast.Expression: handleExpression,
-        # _ast.ExtSlice: handleExtslice,
+        # _ast.ExtSlice: handleExtslice,  # must be for numpy or such
         # _ast.FormattedValue: handleFormattedvalue,
         # _ast.FunctionType: handleFunctiontype,
         _ast.Global: handleAtomic,
+        _ast.Nonlocal: handleAtomic,
 
         # _ast.Interactive: handleInteractive,
         # _ast.JoinedStr: handleJoinedstr,
         # _ast.Lambda: handleLambda,
-        # _ast.Load: handleLoad,
         # _ast.MatMult: handleMatmult,
         _ast.Module: handleModule,
-        # _ast.Nonlocal: handleNonlocal,
-        # _ast.Param: handleParam,
         # _ast.Starred: handleStarred,
-        # _ast.Store: handleStore,
         # _ast.Suite: handleSuite,
-        # _ast.Tuple: handleTuple,
         # _ast.TypeIgnore: handleTypeignore,
-        _ast.With: handleWith,
-        _ast.withitem: handleWithItem,
-        # _ast.alias: handleAlias,
-        # _ast.arg: handleArg,
-        # _ast.arguments: handleArguments,
-        # _ast.cmpop: handleCmpop,
+        _ast.With: (handleGeneric, 'body'.split(), True),
+        _ast.withitem: (handleGeneric, *'context_expr context_vars'.split()),
+
         # _ast.keyword: handleKeyword,
-        # _ast.operator: handleOperator,
+
+        ## Ignore these
+        # _ast.Expression: handleExpression,  # looks like an encapsulation of expr
+        # _ast.arguments: handleArguments,  # already handled in handleFunctionDef
+        # _ast.arg: handleArg,  # just the variablename for function arguments. Doesn't need to be handled
+        # _ast.alias: handleAlias,  # import aliases. Just variable names. Ignore
+        # _ast.cmpop: handleCmpop,  # handled in `compare`
+        # _ast.operator: handleOperator,  # handled with unaryop and binop
         # _ast.stmt: handleStmt,
         # _ast.type_ignore: handleType_Ignore,
+        # contexts:
+        # _ast.Load: handleLoad,
+        # _ast.Store: handleStore,
+        # _ast.AugLoad: handleAugLoad,
+        # _ast.AugStore: handleAugStore,
+        # _ast.Del: handleAtomic,
+        # _ast.Param: handleParam,
     }
 
 
