@@ -84,7 +84,7 @@ class xmlConverter(object):
             try:
                 label = str(astnode.lineno)
             except:
-                label = childName
+                label = parent._get_childNodes()[0]._get_wholeText().strip()
             child.appendChild(self.doc.createTextNode(label))
         parent.appendChild(child)
 
