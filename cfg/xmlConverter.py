@@ -478,6 +478,10 @@ class xmlConverter(object):
 
     def handleTry(self, doc, root, astnode):
 
+        if hasattr(astnode.func, 'id'): functionName = astnode.func.id
+        else: functionName = astnode.func.attr
+        root.setAttribute('functionName', functionName)
+
         self.handleGeneric(doc, root, astnode, 'body', multi=True)
 
         for handler in astnode.handlers:
