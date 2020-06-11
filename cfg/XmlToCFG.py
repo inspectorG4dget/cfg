@@ -13,6 +13,9 @@ class CFG:
     BLACKLIST = set(  # a set of python's builtin functions, that are not imported or defined
                     i.strip() for i in dir(__builtins__)
                )
+    BLACKLIST = set.union(BLACKLIST,
+                          set("name constant eq".split())
+                          )
 
     LOOPS = set('for while'.split())
 
@@ -44,36 +47,25 @@ class CFG:
 
 
     def handleNode(self, node):
-        if node.tag not in self.BLACKLIST:
-            curr = getLine(node)
-            self.nodes.add(curr)
-            delete = set()
-            if curr not in self.last:
-                for last in self.last:
-                    self.edges[last].add(curr)
-                    delete.add(last)
-                self.last -= delete
+        if node.tag in self.BLACKLIST: return
+        if node.attrib.get('functionName', '') in self.BLACKLIST: return
+        curr = getLine(node)
+        self.nodes.add(curr)
+        delete = set()
+        if curr not in self.last:
+            for last in self.last:
+                self.edges[last].add(curr)
+                delete.add(last)
+            self.last -= delete
 
-            #			if node.tag != 'call' and not any(child.tag=='call' for child in node.getchildren()):
-            #				self.last.add(curr)
-            if node.tag != 'expr' or not any(child.tag=='call' for child in node.getchildren()):
-                self.last.add(curr)
-            if node.tag == "exceptElse":
-                self.HANDLERS['exception'](self, node)
-            else:
-                self.HANDLERS[node.tag](self, node)
-
-
-    def handleImportFrom(self, node):
-        return 1
-
-
-    def handleImport(self, node):
-        return 1
-
-
-    def handleReturn(self, node):
-        return 1
+        #			if node.tag != 'call' and not any(child.tag=='call' for child in node.getchildren()):
+        #				self.last.add(curr)
+        if node.tag != 'expr' or not any(child.tag=='call' for child in node.getchildren()):
+            self.last.add(curr)
+        if node.tag == "exceptElse":
+            self.HANDLERS['exception'](self, node)
+        else:
+            self.HANDLERS[node.tag](self, node)
 
 
     def handleIf(self, node):
@@ -484,8 +476,8 @@ class CFG:
                 'for': handleLoop,
                 'functiondef': handleFunctionDef,
                 'if': handleIf,
-                'import': handleImport,
-                'importfrom': handleImportFrom,
+                'import': handleAtomic,
+                'importfrom': handleAtomic,
                 'module': handleModule,
                 'print': handlePrint,
                 'return': handleReturn,
@@ -596,7 +588,8 @@ if __name__ == "__main__":
     xml = 'output.xml'
     cfg = CFG(xml)
     cfg.parse()
+    for k,v in cfg.edges.items(): v.discard(None)
     #	for k in sorted(cfg.edges): print k, sorted(cfg.edges[k]), '\t', cfg.edges[k] == expected[k], '\t', sorted(expected[k]) if cfg.edges[k] != expected[k] else ""
-    for k in sorted(cfg.edges): print(k, ":", sorted(cfg.edges[k]), ',')
+    for k in sorted(cfg.edges): print(k, ":", sorted(cfg.edges[k]))
     print(sorted(cfg.scopes))
     print('done')
